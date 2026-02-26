@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sell Item - Tesatiki</title>
+<link rel="stylesheet" href="sell.css">
+<link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+<meta name="theme-color" content="#FF6701">
+<!-- Favicons -->
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+</head>
+<body>
+
+<header class="main-header">
+    <div class="logo-area">
+        <img src="tesatiki-logo.webp" alt="TESATIKI" class="brand-logo">
+        <span class="brand-text">TESATIKI</span>
+    </div>
+</header>
+
+<main class="content">
+    <div class="sell-container">
+        <div class="form-card">
+            <form id="sellForm">
+                <!-- Step 1: Item Details -->
+                <div class="form-step" id="step1">
+                    <h2>Item Details</h2>
+                    
+                    <div class="form-group">
+                        <label for="itemTitle">Title *</label>
+                        <input type="text" id="itemTitle" placeholder="e.g., iPhone 13 Pro Max 256GB" required>
+                        <div class="char-count"><span id="titleCount">0</span>/60</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="itemCategory">Category *</label>
+                        <select id="itemCategory" required>
+                            <option value="">Select a category</option>
+                            <option value="electronics">Electronics</option>
+                            <option value="phones">Phones</option>
+                            <option value="fashion">Fashion</option>
+                            <option value="furniture">Furniture</option>
+                            <option value="appliances">Appliances</option>
+                            <option value="home">Home</option>
+                            <option value="beauty">Beauty</option>
+                            <option value="health">Health</option>
+                            <option value="computers">Computers</option>
+                            <option value="accessories">Accessories</option>
+                            <option value="kids">Kids</option>
+                            <option value="services">Services</option>
+                            <option value="automotive">Automotive</option>
+                            <option value="tools">Tools</option>
+                            <option value="groceries">Groceries</option>
+                            <option value="books">Books</option>
+                            <option value="gaming">Gaming</option>
+                            <option value="sports">Sports</option>
+                            <option value="pets">Pets</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Condition *</label>
+                        <div class="condition-options">
+                            <label class="condition-option">
+                                <input type="radio" name="condition" value="new" required>
+                                <div class="option-content">
+                                    <i class='bx bx-package'></i>
+                                    <span>New</span>
+                                </div>
+                            </label>
+                            <label class="condition-option">
+                                <input type="radio" name="condition" value="like-new">
+                                <div class="option-content">
+                                    <i class='bx bx-check-circle'></i>
+                                    <span>Like New</span>
+                                </div>
+                            </label>
+                            <label class="condition-option">
+                                <input type="radio" name="condition" value="used-good">
+                                <div class="option-content">
+                                    <i class='bx bx-refresh'></i>
+                                    <span>Used - Good</span>
+                                </div>
+                            </label>
+                            <label class="condition-option">
+                                <input type="radio" name="condition" value="used-fair">
+                                <div class="option-content">
+                                    <i class='bx bx-wrench'></i>
+                                    <span>Used - Fair</span>
+                                </div>
+                            </label>
+                            <label class="condition-option">
+                                <input type="radio" name="condition" value="available">
+                                <div class="option-content">
+                                    <i class='bx bx-check-shield'></i>
+                                    <span>Available</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="button" class="btn-next" onclick="nextStep()">Next</button>
+                </div>
+
+                <!-- Step 2: Description & Price -->
+                <div class="form-step" id="step2">
+                    <h2>Description & Price</h2>
+                    
+                    <div class="form-group">
+                        <label for="itemDescription">Description *</label>
+                        <textarea id="itemDescription" rows="5" placeholder="Describe your item in detail..." required></textarea>
+                        <div class="char-count"><span id="descCount">0</span>/2000</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="itemPrice">Price (UGX) *</label>
+                        <input type="number" id="itemPrice" placeholder="e.g., 500000" required min="0">
+                    </div>
+
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="negotiable"> 
+                            Negotiable
+                        </label>
+                        <label>
+                            <input type="checkbox" id="installment"> 
+                            Installment Available
+                        </label>
+                    </div>
+
+                    <button type="button" class="btn-back" onclick="prevStep()">Back</button>
+                    <button type="button" class="btn-next" onclick="nextStep()">Next</button>
+                </div>
+
+                <!-- Step 3: Ad Type Selection (MOVED HERE) -->
+                <div class="form-step" id="step3">
+                    <h2>Choose Ad Type</h2>
+                    
+                    <div class="form-group">
+                        <label for="adType">Select Ad Type *</label>
+                        <select id="adType" required>
+                            <option value="">Select Ad Type</option>
+                            <option value="free">Free Ad (1 image max)</option>
+                            <option value="7days">Boosted – 7 Days (3 images max) - UGX 5,000</option>
+                            <option value="30days">Boosted – 30 Days (5 images max) - UGX 15,000</option>
+                            <option value="featured">Featured – 30 Days (8 images max) - UGX 50,000</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <p id="adPrice" class="ad-price-text">
+                            Price: —
+                        </p>
+                        <p id="adImageLimit" class="ad-image-limit">
+                            Image limit: —
+                        </p>
+                    </div>
+
+                    <p class="ad-note">
+                        Paid ads get more visibility and appear higher in search results. Image limit increases with paid plans.
+                    </p>
+
+                    <button type="button" class="btn-back" onclick="prevStep()">Back</button>
+                    <button type="button" class="btn-next" onclick="nextStep()">Next</button>
+                </div>
+
+                <!-- Step 4: Photos (MOVED AFTER AD TYPE) -->
+                <div class="form-step" id="step4">
+                    <h2>Upload Photos</h2>
+                    
+                    <div class="form-group">
+                        <div class="image-upload" onclick="document.getElementById('imageInput').click()">
+                            <i class='bx bx-cloud-upload'></i>
+                            <p>Click or drag to upload</p>
+                            <span id="photoCounter">0/1 photos</span>
+                        </div>
+                        <input type="file" id="imageInput" accept="image/*" multiple style="display:none">
+                        <div id="imagePreview" class="image-preview"></div>
+                    </div>
+
+                    <button type="button" class="btn-back" onclick="prevStep()">Back</button>
+                    <button type="button" class="btn-next" onclick="nextStep()">Next</button>
+                </div>
+
+                <!-- Step 5: Location & Contact -->
+                <div class="form-step" id="step5">
+                    <h2>Location & Contact</h2>
+                    
+                    <div class="form-group">
+                        <label for="itemLocation">Location *</label>
+                        <select id="itemLocation" required>
+                            <option value="">Select location</option>
+                            <option value="kampala">Kampala</option>
+                            <option value="entebbe">Entebbe</option>
+                            <option value="jinja">Jinja</option>
+                            <option value="mbarara">Mbarara</option>
+                            <option value="gulu">Gulu</option>
+                            <option value="mbale">Mbale</option>
+                            <option value="lira">Lira</option>
+                            <option value="mukono">Mukono</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="contactPhone">Phone *</label>
+                        <input type="tel" id="contactPhone" placeholder="700123456" pattern="7\d{8}" required>
+                    </div>
+
+                    <button type="button" class="btn-back" onclick="prevStep()">Back</button>
+                    <button type="submit" class="btn-submit">Post Listing</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/browser-image-compression@latest/dist/browser-image-compression.js"></script>
+<script src="sell.js"></script>
+
+<div class="footer">
+  <a href="terms.html">Terms of Service</a> | 
+  <a href="privacy.html">Privacy Policy</a> | 
+  <a href="mailto:tesatikidistribution@gmail.com">Contact</a>
+</div>
+
+</body>
+</html>

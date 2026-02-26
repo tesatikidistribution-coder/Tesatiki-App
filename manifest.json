@@ -1,0 +1,55 @@
+{
+  "name": "Tesatiki",
+  "short_name": "Tesatiki",
+  "description": "Uganda's No.1 Marketplace - Buy, Sell, Connect",
+  "theme_color": "#FF6701",
+  "background_color": "#ffffff",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "/tesatiki-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/tesatiki-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/tesatiki-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/tesatiki-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["shopping", "marketplace"],
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Sell Item",
+      "short_name": "Sell",
+      "description": "Post a new item to sell",
+      "url": "/sell.html",
+      "icons": [{ "src": "/tesatiki-icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Saved Items",
+      "short_name": "Saved",
+      "description": "View saved listings",
+      "url": "/saved.html",
+      "icons": [{ "src": "/tesatiki-icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

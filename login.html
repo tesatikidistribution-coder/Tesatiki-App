@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login | Tesatiki</title>
+    <link rel="stylesheet" href="login.css">
+    <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="login-card">
+        <h2>Welcome Back</h2>
+        <p>Login to manage your shop</p>
+
+        <form id="loginForm">
+            <div class="field">
+                <label>Phone Number</label>
+                <div class="input-box">
+                    <span class="prefix">+256</span>
+                    <input type="tel" id="phone" placeholder="712345678" maxlength="9" required>
+                </div>
+                <div id="phoneError" class="error-text">Must be 9 digits starting with 7.</div>
+            </div>
+
+            <div class="field">
+                <label>Password</label>
+                <div class="input-box">
+                    <input type="password" id="pass" placeholder="••••••••" required>
+                </div>
+            </div>
+
+            <button type="submit" id="btn">Sign In</button>
+        </form>
+
+        <div class="footer">
+    <div>
+        Don't have an account? <a href="register.html">Register</a>
+    </div>
+    <div>
+        <a href="terms.html">Terms of Service</a> |
+        <a href="privacy.html">Privacy Policy</a>
+    </div>
+    <div>Contact: <a href="mailto:tesatikidistribution@gmail.com">tesatikidistribution@gmail.com</a></div>
+</div>
+    </div>
+    
+    <!-- Load config.js first -->
+<script src="config.js"></script>
+
+<!-- Then api.js, which uses CONFIG -->
+<script type="module" src="api.js"></script>
+
+<!-- Then your page-specific JS -->
+<script type="module" src="login.js"></script>
+    
+</body>
+</html>

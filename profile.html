@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Profile | Tesatiki</title>
+  <!-- Boxicons for icons -->
+  <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+  <!-- Custom CSS -->
+<link rel="stylesheet" href="profile.css">
+<!-- Favicons -->
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+</head>
+<body>
+
+  <div class="profile-container">
+
+    <!-- PROFILE VIEW -->
+    <div class="profile-view">
+      <div class="profile-header">
+        <div class="profile-pic" id="profilePic">
+          <i class='bx bxs-user'></i>
+        </div>
+        <h2 id="profileName">
+          <span id="profileNameText">Loading...</span>
+          <i class="bx bxs-badge-check verified-icon-modal hidden" id="profileVerifiedBadge"></i>
+        </h2>
+        <p id="profilePhone">+2567XXXXXXX</p>
+
+        <div class="profile-buttons">
+          <button class="edit-btn" id="btnEditProfile"><i class='bx bx-edit-alt'></i> Edit Profile</button>
+          <button class="edit-btn logout-btn" id="btnLogout"><i class='bx bx-log-out'></i> Logout</button>
+        </div>
+      </div>
+
+      <!-- USER LISTINGS -->
+      <div class="user-listings">
+        <h3>My Listings</h3>
+        <div id="listingsContainer" class="listings-grid">
+          <!-- Listings will be loaded dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- PROFILE EDIT FORM -->
+    <div class="profile-edit hidden" id="profileEdit">
+      <h2>Edit Profile</h2>
+      <form id="editForm">
+        <label>Full Name</label>
+        <input type="text" id="editName" placeholder="Your name" required>
+
+        <label>Phone</label>
+        <input type="tel" id="editPhone" placeholder="+2567..." required>
+
+        <label>Current Password</label>
+        <input type="password" id="editCurrentPassword" placeholder="Enter current password">
+
+        <label>New Password (leave blank to skip)</label>
+        <input type="password" id="editPassword" placeholder="Enter new password">
+        <label>Confirm New Password</label>
+        <input type="password" id="editPasswordConfirm" placeholder="Confirm new password">
+        <div class="password-strength-container" id="passwordStrengthContainer" style="display:none;">
+          <div class="password-strength-meter" id="passwordStrengthMeter"></div>
+          <p class="password-strength-text" id="passwordStrengthText"></p>
+        </div>
+
+        <label>Profile Picture</label>
+        <input type="file" id="editPic" accept="image/*">
+
+        <div class="edit-buttons">
+          <button type="submit" class="save-btn" id="btnSave"><i class='bx bx-save'></i> Save Changes</button>
+          <button type="button" class="cancel-btn" id="btnCancel"><i class='bx bx-x'></i> Cancel</button>
+        </div>
+      </form>
+    </div>
+
+  </div>
+  
+  <!-- ================= BOTTOM NAV ================= -->
+  <nav class="bottom-nav" id="bottomNav">
+    <a href="index.html" class="nav-item active">
+      <i class='bx bxs-home'></i>
+      <span>Home</span>
+    </a>
+
+    <a href="sell.html" class="nav-item sell-btn">
+      <div class="sell-circle">
+        <i class='bx bx-plus'></i>
+      </div>
+    </a>
+
+    <a href="profile.html" class="nav-item">
+      <i class='bx bxs-user'></i>
+      <span>Account</span>
+    </a>
+  </nav>
+
+<!-- WhatsApp Floating Button -->
+<a href="https://wa.me/256768786757" target="_blank" id="whatsappBtn" title="Contact Admin on WhatsApp">
+    <i class='bx bxl-whatsapp'></i>
+</a>
+
+  <!-- Scripts -->
+  <!-- 1️⃣ CONFIG must load first -->
+  <script src="config.js"></script>
+  <!-- 2️⃣ API -->
+  <script type="module" src="api.js"></script>
+  <!-- 3️⃣ Profile JS -->
+  <script type="module" src="profile.js"></script>
+
+<div class="footer">
+  <a href="terms.html">Terms of Service</a> | 
+  <a href="privacy.html">Privacy Policy</a> | 
+  <a href="mailto:tesatikidistribution@gmail.com">Contact</a>
+</div>
+
+</body>
+</html>

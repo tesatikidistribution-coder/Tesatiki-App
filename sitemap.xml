@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+  <!-- Home page -->
+  <url>
+    <loc>https://tesatiki.pages.dev/</loc>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- Main index/listings page -->
+  <url>
+    <loc>https://tesatiki.pages.dev/index.html</loc>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- Sell page -->
+  <url>
+    <loc>https://tesatiki.pages.dev/sell.html</loc>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Profile page -->
+  <url>
+    <loc>https://tesatiki.pages.dev/profile.html</loc>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Admin page -->
+  <url>
+    <loc>https://tesatiki.pages.dev/admin.html</loc>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Offline fallback page -->
+  <url>
+    <loc>https://tesatiki.pages.dev/offline.html</loc>
+    <priority>0.4</priority>
+  </url>
+
+  <!-- Login page -->
+  <url>
+    <loc>https://tesatiki.pages.dev/login.html</loc>
+    <priority>0.5</priority>
+  </url>
+
+  <!-- Register page -->
+  <url>
+    <loc>https://tesatiki.pages.dev/register.html</loc>
+    <priority>0.5</priority>
+  </url>
+
+  <!-- Terms of Service -->
+  <url>
+    <loc>https://tesatiki.pages.dev/terms.html</loc>
+    <priority>0.5</priority>
+  </url>
+
+  <!-- Privacy Policy -->
+  <url>
+    <loc>https://tesatiki.pages.dev/privacy.html</loc>
+    <priority>0.5</priority>
+  </url>
+
+</urlset>

@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="google-site-verification" content="FhLpKriJ6QqsqYdugpb__tlakcMSFlvN0zFteyWUl0g" />
+  <title>Tesatiki Uganda | Buy & Sell New & Used Phones, Electronics, Cars & More Instantly</title>
+  <meta name="description" content="Connect with real buyers and sellers across Uganda on Tesatiki. Post your ad, explore trusted classifieds, and reach people in your city instantly.">
+  
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#FF6701">
+  
+  <!-- Boxicons -->
+  <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+  
+  <!-- CSS -->
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Favicons -->
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+</head>
+<body>
+
+  <!-- ================= TOP BAR ================= -->
+  <header class="top-bar" id="topBar">
+    <!-- Search Box -->
+    <div class="search-container">
+  <!-- Logo -->
+  <div class="logo-wrap">
+  <link rel="preload" as="image" href="/tesatiki-logo.webp">
+  
+<img src="/tesatiki-logo.webp"
+     alt="Tesatiki"
+     class="app-logo"
+     width="250"
+     loading="eager" />
+</div>
+
+  <!-- Search -->
+  <div class="search-box">
+  <input type="text" placeholder="Search products, sellers..." />
+  <button class="search-btn">
+    <i class='bx bx-search-alt-2'></i>
+  </button>
+</div>
+</div>
+
+    <!-- Categories -->
+    <nav class="categories" id="categories">
+
+  <a href="#" class="category-link active" data-category="all">
+    <img src="assets/all.webp" loading="lazy" class="category-img">
+    <span>All</span>
+  </a>
+
+  <a href="#" class="category-link" data-category="electronics">
+    <img src="assets/electronics.webp" loading="lazy" class="category-img">
+    <span>Electronics</span>
+  </a>
+
+  <a href="#" class="category-link" data-category="phones">
+    <img src="assets/phones.webp" loading="lazy" class="category-img">
+    <span>Phones</span>
+  </a>
+
+  <a href="#" class="category-link" data-category="fashion">
+    <img src="assets/fashion.webp" loading="lazy" class="category-img">
+    <span>Fashion</span>
+  </a>
+
+  <a href="#" class="category-link" data-category="furniture">
+    <img src="assets/furniture.webp" loading="lazy" class="category-img">
+    <span>Furniture</span>
+  </a>
+
+  <a href="#" class="category-link" data-category="appliances">
+    <img src="assets/appliances.webp" loading="lazy" class="category-img">
+    <span>Appliances</span>
+  </a>
+
+  <a href="#" class="category-link" data-category="home">
+    <img src="assets/home.webp" loading="lazy" class="category-img">
+    <span>Home</span>
+  </a>
+
+  <a href="#" class="category-link" data-category="beauty">
+    <img src="assets/beauty.webp" loading="lazy" class="category-img">
+    <span>Beauty</span>
+  </a>
+
+  <a href="#" class="category-link" data-category="health">
+    <img src="assets/health.webp" loading="lazy" class="category-img">
+    <span>Health</span>
+  </a>
+
+  <a href="#" class="category-link" data-category="computers">
+    <img src="assets/computers.webp" loading="lazy" class="category-img">
+    <span>Computers</span>
+  </a>
+
+  <a href="#" class="category-link" data-category="accessories">
+    <img src="assets/accessories.webp" loading="lazy" class="category-img">
+    <span>Accessories</span>
+  </a>
+
+  <a href="#" class="category-link" data-category="kids">
+    <img src="assets/kids.webp" loading="lazy" class="category-img">
+    <span>Kids</span>
+  </a>
+
+  <a href="#" class="category-link" data-category="services">
+    <img src="assets/services.webp" loading="lazy" class="category-img">
+    <span>Services</span>
+  </a>
+
+  <a href="#" class="category-link" data-category="automotive">
+    <img src="assets/automotive.webp" loading="lazy" class="category-img">
+    <span>Automotive</span>
+  </a>
+
+  <a href="#" class="category-link" data-category="tools">
+    <img src="assets/tools.webp" loading="lazy" class="category-img">
+    <span>Tools</span>
+  </a>
+
+  <a href="#" class="category-link" data-category="groceries">
+    <img src="assets/groceries.webp" loading="lazy" class="category-img">
+    <span>Groceries</span>
+  </a>
+
+  <a href="#" class="category-link" data-category="books">
+    <img src="assets/books.webp" loading="lazy" class="category-img">
+    <span>Books</span>
+  </a>
+
+  <a href="#" class="category-link" data-category="gaming">
+    <img src="assets/gaming.webp" loading="lazy" class="category-img">
+    <span>Gaming</span>
+  </a>
+
+  <a href="#" class="category-link" data-category="sports">
+    <img src="assets/sports.webp" loading="lazy" class="category-img">
+    <span>Sports</span>
+  </a>
+
+  <a href="#" class="category-link" data-category="pets">
+    <img src="assets/pets.webp" loading="lazy" class="category-img">
+    <span>Pets</span>
+  </a>
+
+  <a href="#" class="category-link" data-category="other">
+    <img src="assets/other.webp" loading="lazy" class="category-img">
+    <span>Other</span>
+  </a>
+
+</nav>
+  </header>
+
+  <!-- ================= MAIN CONTENT ================= -->
+  <main class="content">
+    <div class="product-grid" id="productGrid">
+      <!-- Products will be rendered here -->
+    </div>
+  </main>
+
+  <!-- ================= BOTTOM NAV ================= -->
+  <nav class="bottom-nav" id="bottomNav">
+    <a href="index.html" class="nav-item active">
+      <i class='bx bxs-home'></i>
+      <span>Home</span>
+    </a>
+    
+<a href="sell.html" class="nav-item sell-btn">
+      <div class="sell-circle">
+        <i class='bx bx-plus'></i>
+      </div>
+    </a>
+    
+
+    <a href="profile.html" class="nav-item">
+      <i class='bx bxs-user'></i>
+      <span>Account</span>
+    </a>
+  </nav>
+
+  <!-- ================= FULLSCREEN PRODUCT MODAL ================= -->
+  <div id="productModal" class="product-modal">
+    <div class="modal-header">
+      <button class="modal-back" onclick="closeProduct()">
+        <i class='bx bx-chevron-left'></i>
+      </button>
+      <span class="modal-close" onclick="closeProduct()">
+        <i class='bx bx-x'></i>
+      </span>
+    </div>
+    <div id="productContent" class="modal-content">
+      <!-- Product details will be rendered here -->
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="config.js"></script>
+  <script type="module" src="api.js"></script>
+  <script type="module" src="script.js"></script>
+
+<div class="footer">
+  <a href="terms.html">Terms of Service</a> | 
+  <a href="privacy.html">Privacy Policy</a> | 
+  <a href="mailto:tesatikidistribution@gmail.com">Contact</a>
+</div>
+
+</body>
+</html>

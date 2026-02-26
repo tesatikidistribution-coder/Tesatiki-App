@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - Tesatiki</title>
+  
+  <!-- Boxicons -->
+  <link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+  
+  <!-- Admin CSS -->
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+
+  <!-- ================= SIDEBAR ================= -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <h2>Tesatiki Admin</h2>
+      <button class="sidebar-toggle" id="sidebarToggle">
+        <i class='bx bx-menu'></i>
+      </button>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="#" class="nav-link active" data-section="dashboard">
+        <i class='bx bx-home-circle'></i>
+        <span>Dashboard</span>
+      </a>
+      <a href="#" class="nav-link" data-section="pending">
+        <i class='bx bx-time-five'></i>
+        <span>Pending Products</span>
+        <span class="badge" id="pendingCount">0</span>
+      </a>
+      <a href="#" class="nav-link" data-section="edited">
+        <i class='bx bx-edit'></i>
+        <span>Edited Listings</span>
+        <span class="badge" id="editedCount">0</span>
+      </a>
+      <a href="#" class="nav-link" data-section="approved">
+        <i class='bx bx-check-circle'></i>
+        <span>Approved Products</span>
+      </a>
+      <a href="#" class="nav-link" data-section="users">
+        <i class='bx bx-user'></i>
+        <span>Manage Users</span>
+      </a>
+      <a href="#" class="nav-link" data-section="verification">
+        <i class='bx bx-badge-check'></i>
+        <span>Verification Requests</span>
+        <span class="badge" id="verificationCount">0</span>
+      </a>
+      <a href="#" class="nav-link" data-section="premium">
+        <i class='bx bx-crown'></i>
+        <span>Premium & Featured</span>
+      </a>
+      <a href="#" class="nav-link" data-section="reports">
+        <i class='bx bx-flag'></i>
+        <span>Reports</span>
+        <span class="badge" id="reportsCount">0</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <button class="logout-btn" id="logoutBtn">
+        <i class='bx bx-log-out'></i>
+        <span>Logout</span>
+      </button>
+    </div>
+  </aside>
+
+  <!-- ================= MAIN CONTENT ================= -->
+  <main class="main-content">
+    <header class="top-header">
+      <button class="mobile-menu-btn" id="mobileMenuBtn">
+        <i class='bx bx-menu'></i>
+      </button>
+      <h1 id="pageTitle">Dashboard</h1>
+      <div class="admin-profile">
+        <span>Admin</span>
+        <div class="admin-avatar">A</div>
+      </div>
+    </header>
+
+    <!-- ================= DASHBOARD SECTION ================= -->
+    <section class="content-section active" id="dashboard">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+            <i class='bx bx-time-five'></i>
+          </div>
+          <div class="stat-info">
+            <h3 id="statPending">0</h3>
+            <p>Pending Products</p>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+            <i class='bx bx-check-circle'></i>
+          </div>
+          <div class="stat-info">
+            <h3 id="statApproved">0</h3>
+            <p>Approved Products</p>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+            <i class='bx bx-user'></i>
+          </div>
+          <div class="stat-info">
+            <h3 id="statUsers">0</h3>
+            <p>Total Users</p>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+            <i class='bx bx-badge-check'></i>
+          </div>
+          <div class="stat-info">
+            <h3 id="statVerified">0</h3>
+            <p>Verified Users</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="recent-activity">
+        <h2>Recent Activity</h2>
+        <div id="recentActivity" class="activity-list">
+          <!-- Activity items will be loaded here -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= PENDING PRODUCTS SECTION ================= -->
+    <section class="content-section" id="pending">
+      <div class="section-header">
+        <h2>Pending Products</h2>
+        <div class="filters">
+          <select id="pendingFilter" class="filter-select">
+    <option value="all">All Categories</option>
+    <option value="electronics">Electronics</option>
+    <option value="phones">Phones</option>
+    <option value="fashion">Fashion</option>
+    <option value="furniture">Furniture</option>
+    <option value="appliances">Appliances</option>
+    <option value="home">Home</option>
+    <option value="beauty">Beauty</option>
+    <option value="health">Health</option>
+    <option value="computers">Computers</option>
+    <option value="accessories">Accessories</option>
+    <option value="kids">Kids</option>
+    <option value="services">Services</option>
+    <option value="automotive">Automotive</option>
+    <option value="tools">Tools</option>
+    <option value="groceries">Groceries</option>
+    <option value="books">Books</option>
+    <option value="gaming">Gaming</option>
+    <option value="sports">Sports</option>
+    <option value="pets">Pets</option>
+    <option value="other">Other</option>
+</select>
+        </div>
+      </div>
+      <div id="pendingProducts" class="products-grid">
+        <!-- Products will be loaded here -->
+      </div>
+    </section>
+
+    <!-- ================= EDITED LISTINGS SECTION ================= -->
+    <section class="content-section" id="edited">
+      <div class="section-header">
+        <h2>Edited Listings</h2>
+        <p style="color: #666; font-size: 14px; margin-top: 8px;">
+          These products have been edited by users after approval. Review and approve/reject changes.
+        </p>
+        <div class="filters">
+          <select id="editedFilter" class="filter-select">
+    <option value="all">All Categories</option>
+    <option value="electronics">Electronics</option>
+    <option value="phones">Phones</option>
+    <option value="fashion">Fashion</option>
+    <option value="furniture">Furniture</option>
+    <option value="appliances">Appliances</option>
+    <option value="home">Home</option>
+    <option value="beauty">Beauty</option>
+    <option value="health">Health</option>
+    <option value="computers">Computers</option>
+    <option value="accessories">Accessories</option>
+    <option value="kids">Kids</option>
+    <option value="services">Services</option>
+    <option value="automotive">Automotive</option>
+    <option value="tools">Tools</option>
+    <option value="groceries">Groceries</option>
+    <option value="books">Books</option>
+    <option value="gaming">Gaming</option>
+    <option value="sports">Sports</option>
+    <option value="pets">Pets</option>
+    <option value="other">Other</option>
+</select>
+        </div>
+      </div>
+      <div id="editedProducts" class="products-grid">
+        <!-- Edited products will be loaded here -->
+      </div>
+    </section>
+
+    <!-- ================= APPROVED PRODUCTS SECTION ================= -->
+    <section class="content-section" id="approved">
+      <div class="section-header">
+        <h2>Approved Products</h2>
+        <div class="filters">
+          <input type="text" id="approvedSearch" class="search-input" placeholder="Search approved products...">
+        </div>
+      </div>
+      <div id="approvedProducts" class="products-grid">
+        <!-- Products will be loaded here -->
+      </div>
+    </section>
+
+    <!-- ================= USERS MANAGEMENT SECTION ================= -->
+    <section class="content-section" id="users">
+      <div class="section-header">
+        <h2>Manage Users</h2>
+        <div class="filters">
+          <input type="text" id="userSearch" class="search-input" placeholder="Search users...">
+          <select id="userFilter" class="filter-select">
+            <option value="all">All Users</option>
+            <option value="verified">Verified</option>
+            <option value="unverified">Unverified</option>
+          </select>
+        </div>
+      </div>
+      <div id="usersList" class="users-list">
+        <!-- Users will be loaded here -->
+      </div>
+    </section>
+
+    <!-- ================= VERIFICATION REQUESTS SECTION ================= -->
+    <section class="content-section" id="verification">
+      <div class="section-header">
+        <h2>Verification Requests</h2>
+      </div>
+      <div id="verificationRequests" class="verification-list">
+        <!-- Verification requests will be loaded here -->
+      </div>
+    </section>
+
+    <!-- ================= PREMIUM & FEATURED SECTION ================= -->
+    <section class="content-section" id="premium">
+      <div class="section-header">
+        <h2>Premium & Featured Ads</h2>
+      </div>
+      
+      <div class="premium-tools">
+        <div class="tool-card">
+          <h3>Grant Premium Access</h3>
+          <div class="form-group">
+            <label>User Email/Phone</label>
+            <input type="text" id="premiumUserInput" placeholder="Enter user email or phone">
+          </div>
+          <div class="form-group">
+            <label>Duration (days)</label>
+            <input type="number" id="premiumDuration" value="30" min="1">
+          </div>
+          <button class="btn btn-primary" onclick="grantPremium()">Grant Premium</button>
+        </div>
+
+        <div class="tool-card">
+          <h3>Feature a Product</h3>
+          <div class="form-group">
+            <label>Product ID</label>
+            <input type="text" id="featureProductId" placeholder="Enter product ID">
+          </div>
+          <div class="form-group">
+            <label>Duration (days)</label>
+            <input type="number" id="featureDuration" value="7" min="1">
+          </div>
+          <button class="btn btn-primary" onclick="featureProduct()">Feature Product</button>
+        </div>
+
+        <div class="tool-card">
+          <h3>Boost a Product</h3>
+          <div class="form-group">
+            <label>Product ID</label>
+            <input type="text" id="boostProductId" placeholder="Enter product ID">
+          </div>
+          <button class="btn btn-primary" onclick="boostProduct()">Boost Product</button>
+        </div>
+      </div>
+
+      <div class="premium-list">
+        <h3>Active Premium Users</h3>
+        <div id="premiumUsers" class="list-container">
+          <!-- Premium users will be loaded here -->
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= REPORTS SECTION ================= -->
+    <section class="content-section" id="reports">
+      <div class="section-header">
+        <h2>User Reports</h2>
+      </div>
+      <div id="reportsList" class="reports-list">
+        <!-- Reports will be loaded here -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= PRODUCT PREVIEW MODAL ================= -->
+  <div id="productModal" class="modal">
+    <div class="modal-content">
+      <span class="modal-close" onclick="closeProductModal()">&times;</span>
+      <div id="modalProductContent"></div>
+    </div>
+  </div>
+
+  <!-- ================= USER DETAIL MODAL ================= -->
+  <div id="userModal" class="modal">
+    <div class="modal-content">
+      <span class="modal-close" onclick="closeUserModal()">&times;</span>
+      <div id="modalUserContent"></div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="config.js"></script>
+  <script type="module" src="admin.js"></script>
+
+<div class="footer">
+  <a href="terms.html">Terms of Service</a> | 
+  <a href="privacy.html">Privacy Policy</a> | 
+  <a href="mailto:tesatikidistribution@gmail.com">Contact</a>
+</div>
+
+</body>
+</html>
