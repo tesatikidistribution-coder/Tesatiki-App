@@ -718,10 +718,6 @@ async function runExpireAdsIfNeeded() {
 }
 
 // ================= INITIALIZE =================
-document.addEventListener('DOMContentLoaded', () => {
-  window.tesatiki = new TesatikiApp();
-  runExpireAdsIfNeeded();
-});
 
 function initLazyImages() {
   const lazyImages = document.querySelectorAll(".lazy-img");
