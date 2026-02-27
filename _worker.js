@@ -561,7 +561,7 @@ export default {
     if (pathname === '/api/get-products' && request.method === 'GET') {
       try {
         const cache = caches.default;
-        const cacheKey = new Request(new URL(PRODUCT_CACHE_KEY, url), { method: 'GET' });
+        const cacheKey = new Request(url.toString(), { method: 'GET' });
         
         // Check Cloudflare cache first
         let cachedResponse = await cache.match(cacheKey);
