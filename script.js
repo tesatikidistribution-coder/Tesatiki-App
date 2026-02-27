@@ -205,44 +205,27 @@ class TesatikiApp {
     }
   }
 
+  // ========================
+  // ⭐ LOAD PRODUCTS FROM CACHED ENDPOINT
+  // Uses /api/get-products with 10 minute cache
+  // No auth required - anyone can view
+  // ========================
   async loadProducts() {
     try {
-      const { data, error } = await supabase
-        .from('products')
-        .select(`
-          id,
-          name,
-          price,
-          images,
-          location,
-          category,
-          description,
-          condition,
-          installment,
-          negotiable,
-          phone,
-          user_id,
-          ad_type,
-          is_featured,
-          featured_until,
-          boosted_at,
-          boosted_until,
-          ad_duration,
-          created_at,
-          users (
-            id,
-            full_name,
-            avatar_url,
-            is_verified,
-            last_active,
-            created_at
-          )
-        `)
-        .eq('status', 'approved')
-        .order('created_at', { ascending: false });
+      console.log('📦 Fetching products from /api/get-products (cached, 10 min)...');
       
-      if (error) throw error;
+      // ✅ Use cached endpoint instead of direct Supabase
+      const res = await fetch('/api/get-products');
       
+      if (!res.ok) {
+        throw new Error(`Failed to fetch products: ${res.status}`);
+      }
+
+      // Check if response came from cache
+      const cacheStatus = res.headers.get('X-Cache') || 'UNKNOWN';
+      console.log(`📦 Cache status: ${cacheStatus}`);
+      
+      const data = await res.json();
       const now = new Date();
       
       // Process products and check expirations
@@ -286,6 +269,8 @@ class TesatikiApp {
 
       this.products = this.allProducts;
       this.renderProducts(this.products);
+      
+      console.log(`✅ Loaded ${this.allProducts.length} products (${cacheStatus})`);
       
     } catch (err) {
       console.error('❌ Failed to load products:', err);

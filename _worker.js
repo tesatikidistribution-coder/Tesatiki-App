@@ -30,6 +30,12 @@ const JWT_EXPIRY_HOURS = 8;
 const MAX_LOGIN_ATTEMPTS = 5;
 const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
 
+// ========================
+// CACHING CONSTANTS
+// ========================
+const PRODUCT_CACHE_TTL = 10 * 60; // ⭐ Cache products for 10 minutes (600 seconds)
+const PRODUCT_CACHE_KEY = 'tesatiki:products:approved';
+
 let cachedAuth = null;
 let authTimestamp = 0;
 
@@ -547,6 +553,79 @@ export default {
     }
 
     // ========================
+    // ⭐ GET APPROVED PRODUCTS (PUBLIC - NO AUTH REQUIRED)
+    // GET /api/get-products
+    // Returns cached list of approved products
+    // Anyone can view - logged in or not
+    // ========================
+    if (pathname === '/api/get-products' && request.method === 'GET') {
+      try {
+        const cache = caches.default;
+        const cacheKey = new Request(new URL(PRODUCT_CACHE_KEY, url), { method: 'GET' });
+        
+        // Check Cloudflare cache first
+        let cachedResponse = await cache.match(cacheKey);
+        if (cachedResponse) {
+          console.log('📦 Returning cached products (10 min cache)');
+          return new Response(cachedResponse.body, {
+            ...cachedResponse,
+            headers: {
+              ...cachedResponse.headers,
+              'X-Cache': 'HIT',
+              'Cache-Control': 'public, max-age=600', // Browser cache 10 minutes
+              'content-type': 'application/json'
+            }
+          });
+        }
+
+        // Fetch approved products from Supabase (only if cache miss)
+        const prodResp = await fetch(
+          `${SUPABASE_REST_PRODUCTS}?status=eq.approved&select=id,name,price,images,location,category,description,condition,installment,negotiable,phone,user_id,ad_type,is_featured,featured_until,boosted_at,boosted_until,ad_duration,created_at,users(id,full_name,avatar_url,is_verified,last_active,created_at)&order=created_at.desc`,
+          { headers: svcHeaders(env) }
+        );
+
+        if (!prodResp.ok) {
+          return new Response(JSON.stringify({ error: 'Failed to fetch products' }), {
+            status: 500,
+            headers: { 'content-type': 'application/json' }
+          });
+        }
+
+        const products = await prodResp.json();
+
+        // Build response
+        const responseBody = JSON.stringify(products);
+        const cacheResponse = new Response(responseBody, {
+          status: 200,
+          headers: {
+            'content-type': 'application/json',
+            'Cache-Control': `public, max-age=${PRODUCT_CACHE_TTL}`,
+            'X-Cache': 'MISS'
+          }
+        });
+
+        // Store in Cloudflare cache (10 minutes)
+        ctx.waitUntil(cache.put(cacheKey, cacheResponse.clone()));
+
+        return new Response(responseBody, {
+          status: 200,
+          headers: {
+            'content-type': 'application/json',
+            'Cache-Control': `public, max-age=${PRODUCT_CACHE_TTL}`,
+            'X-Cache': 'MISS'
+          }
+        });
+
+      } catch (err) {
+        console.error('Error in /api/get-products:', err);
+        return new Response(JSON.stringify({ error: err.message }), {
+          status: 500,
+          headers: { 'content-type': 'application/json' }
+        });
+      }
+    }
+
+    // ========================
     // AUTH: REGISTER
     // POST /api/register
     // body: { phone, password, full_name? }
@@ -982,7 +1061,7 @@ export default {
       }
     }
     
-  // ========================
+    // ========================
     // ADMIN: VERIFY USER
     // POST /api/admin/verify-user
     // ========================
@@ -1130,128 +1209,128 @@ export default {
       }
     }
 
-// ========================
-// UPDATE PRODUCT
-// POST /api/update-product
-// ========================
-if (pathname === '/api/update-product' && request.method === 'POST') {
-  try {
-    const payload = await requireAuth(request, env);
-    if (!payload) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-        status: 401,
-        headers: { 'content-type': 'application/json' }
-      });
-    }
+    // ========================
+    // UPDATE PRODUCT
+    // POST /api/update-product
+    // ========================
+    if (pathname === '/api/update-product' && request.method === 'POST') {
+      try {
+        const payload = await requireAuth(request, env);
+        if (!payload) {
+          return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+            status: 401,
+            headers: { 'content-type': 'application/json' }
+          });
+        }
 
-    const body = await request.json();
-    const { productId, updates } = body;
+        const body = await request.json();
+        const { productId, updates } = body;
 
-    if (!productId || !updates) {
-      return new Response(JSON.stringify({ error: 'productId and updates required' }), {
-        status: 400,
-        headers: { 'content-type': 'application/json' }
-      });
-    }
+        if (!productId || !updates) {
+          return new Response(JSON.stringify({ error: 'productId and updates required' }), {
+            status: 400,
+            headers: { 'content-type': 'application/json' }
+          });
+        }
 
-    // Fetch current product
-    const prodResp = await fetch(
-      `${SUPABASE_REST_PRODUCTS}?id=eq.${productId}&select=user_id,status,admin_approved`,
-      {
-        headers: svcHeaders(env)
-      }
-    );
-    
-    if (!prodResp.ok) {
-      return new Response(JSON.stringify({ error: 'Failed to fetch product' }), {
-        status: 500,
-        headers: { 'content-type': 'application/json' }
-      });
-    }
-    
-    const prodArr = await prodResp.json();
-    if (!prodArr || prodArr.length === 0) {
-      return new Response(JSON.stringify({ error: 'Product not found' }), {
-        status: 404,
-        headers: { 'content-type': 'application/json' }
-      });
-    }
-
-    const currentProduct = prodArr[0];
-    const ownerId = currentProduct.user_id;
-    if (ownerId !== payload.userId && payload.role !== 'admin') {
-      return new Response(JSON.stringify({ error: 'Forbidden' }), {
-        status: 403,
-        headers: { 'content-type': 'application/json' }
-      });
-    }
-
-    const cleanUpdates = sanitizeProductFields(updates);
-
-    // ================= SMART STATUS LOGIC =================
-    /**
-     * FIX: Only "edited listings" should appear if the listing was ALREADY APPROVED
-     * 
-     * RULES:
-     * 1. User edits APPROVED listing → status = "edited" (needs re-approval)
-     * 2. User edits PENDING listing → status stays "pending" (no editing new listings)
-     * 3. Admin approves → don't change status (keep as "approved")
-     * 
-     * RESULT:
-     * - New listings approved don't go to "edited listings" ✅
-     * - Only re-edited approved listings go to "edited listings" ✅
-     */
-    
-    if (payload.role === 'admin') {
-      // ✅ Admin is updating (approving) - preserve whatever the current status is
-      // This prevents newly approved listings from reverting
-      cleanUpdates.status = updates.status || 'approved';
-      cleanUpdates.admin_approved = true;
-      cleanUpdates.approved_at = cleanUpdates.approved_at || new Date().toISOString();
-      
-    } else {
-      // 👤 User is updating their listing
-      if (currentProduct.status === 'approved') {
-        // User is editing an ALREADY-APPROVED listing → send to edited queue for re-approval
-        cleanUpdates.status = 'edited';
+        // Fetch current product
+        const prodResp = await fetch(
+          `${SUPABASE_REST_PRODUCTS}?id=eq.${productId}&select=user_id,status,admin_approved`,
+          {
+            headers: svcHeaders(env)
+          }
+        );
         
-      } else if (currentProduct.status === 'pending') {
-        // User is editing a PENDING (new) listing → keep it pending
-        cleanUpdates.status = 'pending';
+        if (!prodResp.ok) {
+          return new Response(JSON.stringify({ error: 'Failed to fetch product' }), {
+            status: 500,
+            headers: { 'content-type': 'application/json' }
+          });
+        }
         
-      } else {
-        // Default: keep current status
-        cleanUpdates.status = currentProduct.status;
+        const prodArr = await prodResp.json();
+        if (!prodArr || prodArr.length === 0) {
+          return new Response(JSON.stringify({ error: 'Product not found' }), {
+            status: 404,
+            headers: { 'content-type': 'application/json' }
+          });
+        }
+
+        const currentProduct = prodArr[0];
+        const ownerId = currentProduct.user_id;
+        if (ownerId !== payload.userId && payload.role !== 'admin') {
+          return new Response(JSON.stringify({ error: 'Forbidden' }), {
+            status: 403,
+            headers: { 'content-type': 'application/json' }
+          });
+        }
+
+        const cleanUpdates = sanitizeProductFields(updates);
+
+        // ================= SMART STATUS LOGIC =================
+        /**
+         * FIX: Only "edited listings" should appear if the listing was ALREADY APPROVED
+         * 
+         * RULES:
+         * 1. User edits APPROVED listing → status = "edited" (needs re-approval)
+         * 2. User edits PENDING listing → status stays "pending" (no editing new listings)
+         * 3. Admin approves → don't change status (keep as "approved")
+         * 
+         * RESULT:
+         * - New listings approved don't go to "edited listings" ✅
+         * - Only re-edited approved listings go to "edited listings" ✅
+         */
+        
+        if (payload.role === 'admin') {
+          // ✅ Admin is updating (approving) - preserve whatever the current status is
+          // This prevents newly approved listings from reverting
+          cleanUpdates.status = updates.status || 'approved';
+          cleanUpdates.admin_approved = true;
+          cleanUpdates.approved_at = cleanUpdates.approved_at || new Date().toISOString();
+          
+        } else {
+          // 👤 User is updating their listing
+          if (currentProduct.status === 'approved') {
+            // User is editing an ALREADY-APPROVED listing → send to edited queue for re-approval
+            cleanUpdates.status = 'edited';
+            
+          } else if (currentProduct.status === 'pending') {
+            // User is editing a PENDING (new) listing → keep it pending
+            cleanUpdates.status = 'pending';
+            
+          } else {
+            // Default: keep current status
+            cleanUpdates.status = currentProduct.status;
+          }
+        }
+
+        cleanUpdates.updated_at = new Date().toISOString();
+
+        const updateResp = await fetch(`${SUPABASE_REST_PRODUCTS}?id=eq.${productId}`, {
+          method: 'PATCH',
+          headers: { ...svcHeaders(env), 'Prefer': 'return=representation' },
+          body: JSON.stringify(cleanUpdates)
+        });
+
+        if (!updateResp.ok) {
+          const txt = await updateResp.text();
+          return new Response(JSON.stringify({ error: 'Failed to update product', details: txt }), {
+            status: 500,
+            headers: { 'content-type': 'application/json' }
+          });
+        }
+
+        const updated = await updateResp.json();
+        return new Response(JSON.stringify({ success: true, product: updated[0] || null }), {
+          headers: { 'content-type': 'application/json' }
+        });
+      } catch (err) {
+        return new Response(JSON.stringify({ error: err.message }), {
+          status: 500,
+          headers: { 'content-type': 'application/json' }
+        });
       }
     }
-
-    cleanUpdates.updated_at = new Date().toISOString();
-
-    const updateResp = await fetch(`${SUPABASE_REST_PRODUCTS}?id=eq.${productId}`, {
-      method: 'PATCH',
-      headers: { ...svcHeaders(env), 'Prefer': 'return=representation' },
-      body: JSON.stringify(cleanUpdates)
-    });
-
-    if (!updateResp.ok) {
-      const txt = await updateResp.text();
-      return new Response(JSON.stringify({ error: 'Failed to update product', details: txt }), {
-        status: 500,
-        headers: { 'content-type': 'application/json' }
-      });
-    }
-
-    const updated = await updateResp.json();
-    return new Response(JSON.stringify({ success: true, product: updated[0] || null }), {
-      headers: { 'content-type': 'application/json' }
-    });
-  } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
-      status: 500,
-      headers: { 'content-type': 'application/json' }
-    });
-  }
-}
 
     // ========================
     // DELETE IMAGES
