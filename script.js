@@ -413,6 +413,7 @@ class TesatikiApp {
       width="300" 
       height="300"
       loading="lazy"
+      onerror="this.src='placeholder.png'; console.error('❌ [CARD] Image failed:', this.dataset.src);"
     >
   </div>
 `).join('')}
@@ -548,7 +549,16 @@ function openProduct(product) {
 
   content.innerHTML = `
     <div class="modal-image-slider" id="modalImageSlider">
-      ${images.map((img, index) => `<img src="${img}" alt="${product.name}" data-index="${index}">`).join('')}
+      ${images.map((img, index) => `
+        <img 
+          src="placeholder.png" 
+          data-src="${img}" 
+          alt="${product.name}" 
+          data-index="${index}"
+          style="width: 100%; height: auto; display: block;"
+          onerror="this.src='placeholder.png'; console.error('❌ [MODAL] Image failed:', this.dataset.src);"
+        >
+      `).join('')}
     </div>
 
     ${images.length > 1 ? `
@@ -619,6 +629,25 @@ function openProduct(product) {
     });
   }
 
+  // Load modal images with proper error handling
+  console.log(`📸 [MODAL] Loading ${images.length} image(s)`);
+  setTimeout(() => {
+    const modalImages = content.querySelectorAll('[data-src]');
+    modalImages.forEach((img, idx) => {
+      const dataSrc = img.dataset.src;
+      console.log(`📸 [MODAL] Loading image ${idx + 1}/${modalImages.length}: ${dataSrc}`);
+      
+      img.src = dataSrc;
+      img.onerror = () => {
+        console.error(`❌ [MODAL] Image ${idx + 1} failed to load: ${dataSrc}`);
+        img.src = 'placeholder.png';
+      };
+      img.onload = () => {
+        console.log(`✅ [MODAL] Image ${idx + 1} loaded: ${dataSrc}`);
+      };
+    });
+  }, 50);
+
   // Setup image slider indicators
   if (images.length > 1) {
     const slider = content.querySelector('#modalImageSlider');
@@ -644,6 +673,7 @@ function openProduct(product) {
 
   modal.style.display = 'block';
   document.body.style.overflow = 'hidden';
+  console.log('✅ [MODAL] Opened');
 }
 
 function closeProduct() {
@@ -702,38 +732,67 @@ async function runExpireAdsIfNeeded() {
   }
 }
 
-// ================= INITIALIZE =================
-
+// ================= LAZY IMAGE LOADER =================
 function initLazyImages() {
   const lazyImages = document.querySelectorAll(".lazy-img");
+  console.log(`📸 [LAZY] Initializing lazy loading for ${lazyImages.length} images`);
 
   if ("IntersectionObserver" in window) {
     const observer = new IntersectionObserver((entries, obs) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
           const img = entry.target;
-          img.src = img.dataset.src;
-          img.onload = () => img.classList.add("loaded");
+          const dataSrc = img.dataset.src;
+          console.log(`📸 [LAZY] Loading: ${dataSrc}`);
+          
+          img.src = dataSrc;
+          img.onload = () => {
+            img.classList.add("loaded");
+            console.log(`✅ [LAZY] Loaded: ${dataSrc}`);
+          };
+          img.onerror = () => {
+            console.error(`❌ [LAZY] Failed to load: ${dataSrc}`);
+            console.error(`   Network tab shows request details.`);
+            img.src = 'placeholder.png';
+            img.classList.add('error');
+          };
           obs.unobserve(img);
         }
       });
+    }, { 
+      rootMargin: '50px' // Start loading 50px before visible
     });
 
     lazyImages.forEach(img => observer.observe(img));
   } else {
-    // fallback
+    // Fallback for browsers without IntersectionObserver
+    console.warn('⚠️ [LAZY] IntersectionObserver not supported, loading all images immediately');
     lazyImages.forEach(img => {
-      img.src = img.dataset.src;
-      img.onload = () => img.classList.add("loaded");
+      const dataSrc = img.dataset.src;
+      console.log(`📸 [LAZY] Loading (fallback): ${dataSrc}`);
+      
+      img.src = dataSrc;
+      img.onload = () => {
+        img.classList.add("loaded");
+        console.log(`✅ [LAZY] Loaded (fallback): ${dataSrc}`);
+      };
+      img.onerror = () => {
+        console.error(`❌ [LAZY] Failed (fallback): ${dataSrc}`);
+        img.src = 'placeholder.png';
+        img.classList.add('error');
+      };
     });
   }
 }
 
-// Call after rendering products
+// ================= INITIALIZE =================
 document.addEventListener('DOMContentLoaded', () => {
+  console.log('🚀 Tesatiki App Starting...');
   window.tesatiki = new TesatikiApp();
   runExpireAdsIfNeeded();
 
   // lazy-load product images after initial render
   setTimeout(initLazyImages, 500); // slight delay to ensure product cards exist
+  
+  console.log('✅ Tesatiki App Ready');
 });

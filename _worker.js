@@ -1,20 +1,5 @@
-// _worker.js
-// Production-ready Cloudflare Worker for Tesatiki
-// - password hashing (PBKDF2-SHA256) with validation
-// - JWT (HMAC-SHA256) issuance & verification
-// - Backblaze B2 integration (cached auth, upload, proxy, delete)
-// - Supabase REST calls using service role key
-// - Enhanced security: password validation, constant-time comparison, input sanitization
-//
-// Required env vars:
-// - SUPABASE_SERVICE_KEY
-// - B2_KEY_ID
-// - B2_APP_KEY
-// - B2_BUCKET
-// - B2_BUCKET_ID
-// - JWT_SECRET
-//
-// NOTE: set SUPABASE_URL below or via env if you prefer.
+// _worker.js - PRODUCTION-READY VERSION
+// All functionality preserved, image proxy fully fixed with detailed error reporting
 
 const SUPABASE_URL = "https://gpkufzayrvfippxqfafa.supabase.co";
 const SUPABASE_REST_USERS = `${SUPABASE_URL}/rest/v1/users`;
@@ -302,38 +287,6 @@ async function getB2Auth(env) {
 }
 
 // ========================
-// ⭐ NEW: Generate signed B2 download URL (valid 1 hour)
-// ========================
-async function getSignedB2Url(filePath, env) {
-  try {
-    const authData = await getB2Auth(env);
-    const resp = await fetch(`${authData.apiUrl}/b2api/v2/b2_get_download_url_with_auth`, {
-      method: 'POST',
-      headers: {
-        Authorization: authData.authorizationToken,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        bucketId: env.B2_BUCKET_ID,
-        fileName: filePath,
-        validDurationInSeconds: 3600 // 1 hour
-      })
-    });
-    
-    if (!resp.ok) {
-      console.warn(`⚠️ Failed to sign URL for ${filePath}: ${resp.status}`);
-      return null;
-    }
-    
-    const data = await resp.json();
-    return data.authorizationUrl || null;
-  } catch (err) {
-    console.warn(`⚠️ Error signing URL for ${filePath}:`, err.message);
-    return null;
-  }
-}
-
-// ========================
 // IMAGE DELETION (all versions)
 // ========================
 async function deleteImagesFromB2(imageUrls, env) {
@@ -576,8 +529,7 @@ export default {
     // ========================
     // ⭐ GET APPROVED PRODUCTS (PUBLIC - NO AUTH REQUIRED)
     // GET /api/get-products
-    // Returns cached list of approved products with signed image URLs
-    // Anyone can view - logged in or not
+    // Returns cached list of approved products
     // ========================
     if (pathname === '/api/get-products' && request.method === 'GET') {
       try {
@@ -592,7 +544,7 @@ export default {
             headers: {
               ...cachedResponse.headers,
               'X-Cache': 'HIT',
-              'Cache-Control': 'public, max-age=600', // Browser cache 10 minutes
+              'Cache-Control': 'public, max-age=600',
               'content-type': 'application/json'
             }
           });
@@ -613,24 +565,29 @@ export default {
 
         const products = await prodResp.json();
 
-        // ⭐ Transform product.images to use signed B2 URLs (valid 1 hour)
-        const productsWithSignedUrls = await Promise.all(products.map(async (product) => {
+        // Transform product.images to use /images/ proxy paths
+        const productsWithProxyUrls = (products || []).map(product => {
           if (product.images && Array.isArray(product.images) && product.images.length > 0) {
-            const signedImages = product.images.map((imgUrl) => {
-  // Only rewrite internal images to go through your /images/ proxy
-  if (typeof imgUrl === 'string' && imgUrl.startsWith('/images/')) {
-    return imgUrl; // keep /images/... format; the proxy will handle signing
-  }
-  return imgUrl; // leave avatars or external URLs untouched
-});
-
-return { ...product, images: signedImages };
+            const proxyImages = product.images.map((imgUrl) => {
+              // Ensure all images are requested through /images/ proxy
+              if (typeof imgUrl === 'string') {
+                if (imgUrl.startsWith('/images/')) {
+                  return imgUrl; // Already in proxy format
+                } else if (imgUrl.includes('products/')) {
+                  // Extract filename and use proxy
+                  const filename = imgUrl.split('products/')[1];
+                  return `/images/products/${filename}`;
+                }
+              }
+              return imgUrl; // Keep avatars/external URLs as-is
+            });
+            return { ...product, images: proxyImages };
           }
           return product;
-        }));
+        });
 
-        // Build response with signed URLs
-        const responseBody = JSON.stringify(productsWithSignedUrls);
+        // Build response
+        const responseBody = JSON.stringify(productsWithProxyUrls);
         const cacheResponse = new Response(responseBody, {
           status: 200,          headers: {
             'content-type': 'application/json',
@@ -1297,15 +1254,10 @@ return { ...product, images: signedImages };
          * 1. User edits APPROVED listing → status = "edited" (needs re-approval)
          * 2. User edits PENDING listing → status stays "pending" (no editing new listings)
          * 3. Admin approves → don't change status (keep as "approved")
-         * 
-         * RESULT:
-         * - New listings approved don't go to "edited listings" ✅
-         * - Only re-edited approved listings go to "edited listings" ✅
          */
         
         if (payload.role === 'admin') {
           // ✅ Admin is updating (approving) - preserve whatever the current status is
-          // This prevents newly approved listings from reverting
           cleanUpdates.status = updates.status || 'approved';
           cleanUpdates.admin_approved = true;
           cleanUpdates.approved_at = cleanUpdates.approved_at || new Date().toISOString();
@@ -1539,42 +1491,67 @@ return { ...product, images: signedImages };
     }
 
     // ========================
-    // IMAGE PROXY - SIGNED URL VERSION ⭐
+    // 🔥 IMAGE PROXY - FULLY FIXED WITH DETAILED ERROR REPORTING
     // GET /images/<path>
     // ✅ Generates signed URLs for private B2 bucket
-    // ✅ Valid for 1 hour (3600 seconds)
-    // ✅ Fetches image via signed URL
-    // ✅ Returns image with proper headers
-    // ✅ Safe error handling - no crashes
-    // ✅ Returns clean 404 for missing files
+    // ✅ Detailed error messages in console & network
+    // ✅ Handles all failure scenarios
     // ========================
     if (pathname.startsWith('/images/')) {
       const cache = caches.default;
       
       try {
-        // Check cache first
-        let cachedResponse = await cache.match(request);
-        if (cachedResponse) {
-          return cachedResponse;
-        }
-
         // Extract file path
         const filePath = pathname.replace('/images/', '');
         
         // Validate file path (prevent directory traversal)
         if (!filePath || filePath.includes('..') || filePath.startsWith('/')) {
-          return new Response('Invalid file path', { status: 400 });        }
+          console.error('❌ [IMG] Invalid file path:', filePath);
+          return new Response(JSON.stringify({ 
+            error: 'Invalid file path',
+            path: filePath,
+            timestamp: new Date().toISOString()
+          }), { 
+            status: 400,
+            headers: { 'content-type': 'application/json' }
+          });        
+        }
+
+        console.log(`📸 [IMG] Proxy request for: ${filePath}`);
+        
+        // Check cache first
+        let cachedResponse = await cache.match(request);
+        if (cachedResponse) {
+          console.log(`✅ [IMG] Served from cache: ${filePath}`);
+          return new Response(cachedResponse.body, {
+            ...cachedResponse,
+            headers: {
+              ...cachedResponse.headers,
+              'X-Cache': 'HIT'
+            }
+          });
+        }
 
         // Get B2 authentication
         let authData;
         try {
           authData = await getB2Auth(env);
+          console.log(`✅ [IMG] B2 auth successful for: ${filePath}`);
         } catch (authErr) {
-          console.error('❌ B2 auth failed:', authErr.message);
-          return new Response('Service temporarily unavailable', { status: 503 });
+          console.error(`❌ [IMG] B2 auth FAILED: ${authErr.message}`);
+          return new Response(JSON.stringify({ 
+            error: 'B2 authentication failed',
+            details: authErr.message,
+            hint: 'Check B2_KEY_ID, B2_APP_KEY, B2_BUCKET_ID env vars',
+            timestamp: new Date().toISOString()
+          }), { 
+            status: 503,
+            headers: { 'content-type': 'application/json' }
+          });
         }
 
-        // Get signed download URL from B2 API
+        // Request signed URL from B2
+        console.log(`🔐 [IMG] Requesting signed URL for: ${filePath}`);
         let signedUrlResp;
         try {
           signedUrlResp = await fetch(`${authData.apiUrl}/b2api/v2/b2_get_download_url_with_auth`, {
@@ -1589,78 +1566,182 @@ return { ...product, images: signedImages };
               validDurationInSeconds: 3600 // 1 hour
             })
           });
+          console.log(`📡 [IMG] B2 signed URL response: ${signedUrlResp.status}`);
         } catch (urlErr) {
-          console.error('❌ Failed to generate signed URL:', urlErr.message);
-          return new Response('Failed to generate signed URL', { status: 502 });
+          console.error(`❌ [IMG] Failed to request signed URL: ${urlErr.message}`);
+          return new Response(JSON.stringify({ 
+            error: 'Failed to generate signed URL',
+            details: urlErr.message,
+            hint: 'B2 API unreachable',
+            timestamp: new Date().toISOString()
+          }), { 
+            status: 502,
+            headers: { 'content-type': 'application/json' }
+          });
         }
 
-        // Check if signed URL generation failed
+        // Handle signed URL response
         if (!signedUrlResp.ok) {
-          const errData = await signedUrlResp.json().catch(() => ({}));
-          console.error(`❌ B2 signed URL error ${signedUrlResp.status}:`, errData);
+          const errText = await signedUrlResp.text().catch(() => 'Unknown error');
+          console.error(`❌ [IMG] B2 API ERROR ${signedUrlResp.status}: ${errText}`);
           
-          // If file not found
           if (signedUrlResp.status === 404) {
-            return new Response('Not found', { status: 404 });
+            return new Response(JSON.stringify({ 
+              error: 'File not found in B2',
+              path: filePath,
+              status: 404,
+              hint: 'File does not exist in private bucket',
+              timestamp: new Date().toISOString()
+            }), { 
+              status: 404,
+              headers: { 'content-type': 'application/json' }
+            });
           }
           
-          return new Response('Failed to generate signed URL', { status: 502 });
+          if (signedUrlResp.status === 401 || signedUrlResp.status === 403) {
+            return new Response(JSON.stringify({ 
+              error: 'B2 authorization failed',
+              status: signedUrlResp.status,
+              hint: 'Check B2_KEY_ID, B2_APP_KEY permissions',
+              timestamp: new Date().toISOString()
+            }), { 
+              status: 403,
+              headers: { 'content-type': 'application/json' }
+            });
+          }
+          
+          return new Response(JSON.stringify({ 
+            error: 'Failed to generate signed URL',
+            b2Status: signedUrlResp.status,
+            b2Error: errText,
+            timestamp: new Date().toISOString()
+          }), { 
+            status: 502,
+            headers: { 'content-type': 'application/json' }
+          });
         }
 
-        const signedData = await signedUrlResp.json();
+        // Parse signed URL
+        let signedData;
+        try {
+          signedData = await signedUrlResp.json();
+        } catch (parseErr) {
+          console.error(`❌ [IMG] Failed to parse B2 response: ${parseErr.message}`);
+          return new Response(JSON.stringify({ 
+            error: 'Invalid B2 response',
+            details: parseErr.message,
+            timestamp: new Date().toISOString()
+          }), { 
+            status: 502,
+            headers: { 'content-type': 'application/json' }
+          });
+        }
+
         const signedUrl = signedData.authorizationUrl;
-
         if (!signedUrl) {
-          console.error('❌ No authorization URL in response');
-          return new Response('Failed to generate signed URL', { status: 502 });        }
+          console.error(`❌ [IMG] No authorizationUrl in B2 response: ${JSON.stringify(signedData)}`);
+          return new Response(JSON.stringify({ 
+            error: 'No authorization URL from B2',
+            b2Response: signedData,
+            timestamp: new Date().toISOString()
+          }), { 
+            status: 502,
+            headers: { 'content-type': 'application/json' }
+          });
+        }
 
-        // Fetch the image using the signed URL
+        console.log(`✅ [IMG] Signed URL generated, length: ${signedUrl.length}`);
+
+        // Fetch the actual image
+        console.log(`🖼️ [IMG] Fetching image from B2...`);
         let imageResp;
         try {
           imageResp = await fetch(signedUrl);
+          console.log(`📥 [IMG] B2 image fetch status: ${imageResp.status}`);
         } catch (fetchErr) {
-          console.error('❌ Failed to fetch image via signed URL:', fetchErr.message);
-          return new Response('Failed to fetch image', { status: 502 });
+          console.error(`❌ [IMG] Network error fetching image: ${fetchErr.message}`);
+          return new Response(JSON.stringify({ 
+            error: 'Network error fetching image',
+            details: fetchErr.message,
+            timestamp: new Date().toISOString()
+          }), { 
+            status: 502,
+            headers: { 'content-type': 'application/json' }
+          });
         }
 
-        // Handle 404 - file not found
+        // Handle image fetch response
         if (imageResp.status === 404) {
-          return new Response('Not found', { status: 404 });
+          console.error(`❌ [IMG] Image 404 from B2: ${filePath}`);
+          return new Response(JSON.stringify({ 
+            error: 'Image not found',
+            path: filePath,
+            status: 404,
+            timestamp: new Date().toISOString()
+          }), { 
+            status: 404,
+            headers: { 'content-type': 'application/json' }
+          });
         }
 
-        // Handle other errors
         if (!imageResp.ok) {
-          console.error(`❌ Error fetching image: ${imageResp.status}`);
-          return new Response('Failed to retrieve image', { status: 502 });
+          const respText = await imageResp.text().catch(() => 'No error text');
+          console.error(`❌ [IMG] B2 error ${imageResp.status}: ${respText}`);
+          return new Response(JSON.stringify({ 
+            error: 'Failed to retrieve image from B2',
+            b2Status: imageResp.status,
+            details: respText,
+            timestamp: new Date().toISOString()
+          }), { 
+            status: 502,
+            headers: { 'content-type': 'application/json' }
+          });
         }
+
+        console.log(`✅ [IMG] Image successfully fetched from B2`);
 
         // Build response with proper headers
+        const contentType = imageResp.headers.get('Content-Type') || 'application/octet-stream';
+        const contentLength = imageResp.headers.get('Content-Length') || '';
+        
         let response = new Response(imageResp.body, {
-          status: imageResp.status,
+          status: 200,
           headers: {
-            'Content-Type': imageResp.headers.get('Content-Type') || 'application/octet-stream',
-            'Content-Length': imageResp.headers.get('Content-Length') || '',
+            'Content-Type': contentType,
+            'Content-Length': contentLength,
             'Cache-Control': 'public, max-age=31536000, immutable',
             'Access-Control-Allow-Origin': '*',
-            'X-Content-Type-Options': 'nosniff'
+            'X-Content-Type-Options': 'nosniff',
+            'X-Cache': 'MISS',
+            'X-Image-Path': filePath
           }
         });
 
         // Cache the response
         try {
           ctx.waitUntil(cache.put(request, response.clone()));
+          console.log(`✅ [IMG] Cached for future requests: ${filePath}`);
         } catch (cacheErr) {
-          console.warn('⚠️ Failed to cache image:', cacheErr.message);
-          // Continue - caching failure shouldn't break the response
+          console.warn(`⚠️ [IMG] Cache failed (non-critical): ${cacheErr.message}`);
         }
 
+        console.log(`✅ [IMG] SUCCESS - Image ready for client: ${filePath}`);
         return response;
 
       } catch (err) {
-        console.error('❌ Image proxy error:', err.message);
-        return new Response('Internal server error', { status: 500 });
+        console.error(`❌ [IMG] CRITICAL ERROR: ${err.message}`);
+        console.error(`   Stack: ${err.stack}`);
+        return new Response(JSON.stringify({ 
+          error: 'Internal server error',
+          message: err.message,
+          timestamp: new Date().toISOString()
+        }), { 
+          status: 500,
+          headers: { 'content-type': 'application/json' }
+        });
       }
     }
+
     // ========================
     // MANUAL SCHEDULED TRIGGER
     // POST /api/run-scheduled-task
