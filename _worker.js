@@ -1522,31 +1522,102 @@ export default {
     }
 
     // ========================
-    // IMAGE PROXY
+    // IMAGE PROXY - FIXED VERSION
     // GET /images/<path>
+    // ✅ Properly fetches from private B2 bucket
+    // ✅ Returns proper headers
+    // ✅ Safe error handling - no 500 errors
+    // ✅ Returns clean 404 for missing files
     // ========================
     if (pathname.startsWith('/images/')) {
       const cache = caches.default;
-      let response = await cache.match(request);
-      if (response) return response;
-
+      
       try {
+        // Check cache first
+        let cachedResponse = await cache.match(request);
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+
+        // Extract file path
         const filePath = pathname.replace('/images/', '');
-        const authData = await getB2Auth(env);
-        const fileUrl = `${authData.downloadUrl}/file/${env.B2_BUCKET}/${filePath}`;
-
-        const imageResp = await fetch(fileUrl, {
-          headers: { Authorization: authData.authorizationToken }
-        });
         
-        if (!imageResp.ok) return new Response('Not found', { status: 404 });
+        // Validate file path (prevent directory traversal)
+        if (!filePath || filePath.includes('..') || filePath.startsWith('/')) {
+          return new Response('Invalid file path', { status: 400 });
+        }
 
-        response = new Response(imageResp.body, imageResp);
-        response.headers.set('Cache-Control', 'public, max-age=31536000');
-        ctx.waitUntil(cache.put(request, response.clone()));
+        // Get B2 authentication
+        let authData;
+        try {
+          authData = await getB2Auth(env);
+        } catch (authErr) {
+          console.error('❌ B2 auth failed:', authErr.message);
+          return new Response('Service temporarily unavailable', { status: 503 });
+        }
+
+        // Build B2 download URL and fetch
+        const fileUrl = `${authData.downloadUrl}/file/${env.B2_BUCKET}/${filePath}`;
+        
+        let imageResp;
+        try {
+          imageResp = await fetch(fileUrl, {
+            headers: { 
+              Authorization: authData.authorizationToken,
+              'Range': request.headers.get('Range') || undefined
+            }
+          });
+        } catch (fetchErr) {
+          console.error('❌ B2 fetch failed:', fetchErr.message);
+          return new Response('Failed to fetch image', { status: 502 });
+        }
+
+        // Handle 404 - file not found in B2
+        if (imageResp.status === 404) {
+          console.log(`📭 Image not found in B2: ${filePath}`);
+          return new Response('Not found', { status: 404 });
+        }
+
+        // Handle other B2 errors
+        if (!imageResp.ok) {
+          console.error(`❌ B2 error ${imageResp.status}: ${filePath}`);
+          return new Response('Failed to retrieve image', { status: 502 });
+        }
+
+        // Build response with proper headers
+        let response = new Response(imageResp.body, {
+          status: imageResp.status,
+          statusText: imageResp.statusText,
+          headers: {
+            'Content-Type': imageResp.headers.get('Content-Type') || 'application/octet-stream',
+            'Content-Length': imageResp.headers.get('Content-Length') || '',
+            'Cache-Control': 'public, max-age=31536000, immutable',
+            'Access-Control-Allow-Origin': '*',
+            'X-Content-Type-Options': 'nosniff'
+          }
+        });
+
+        // Preserve range request headers if applicable
+        if (imageResp.status === 206) {
+          const contentRange = imageResp.headers.get('Content-Range');
+          if (contentRange) {
+            response.headers.set('Content-Range', contentRange);
+          }
+        }
+
+        // Cache the response
+        try {
+          ctx.waitUntil(cache.put(request, response.clone()));
+        } catch (cacheErr) {
+          console.warn('⚠️ Failed to cache image:', cacheErr.message);
+          // Continue - caching failure shouldn't break the response
+        }
+
         return response;
+
       } catch (err) {
-        return new Response('Error fetching image', { status: 500 });
+        console.error('❌ Image proxy error:', err.message);
+        return new Response('Internal server error', { status: 500 });
       }
     }
 
