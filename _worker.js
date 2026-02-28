@@ -616,18 +616,15 @@ export default {
         // ⭐ Transform product.images to use signed B2 URLs (valid 1 hour)
         const productsWithSignedUrls = await Promise.all(products.map(async (product) => {
           if (product.images && Array.isArray(product.images) && product.images.length > 0) {
-            const signedImages = await Promise.all(product.images.map(async (imgUrl) => {
-              // Only sign URLs that point to our B2 bucket (/images/<filename> format)
-              // Leave avatars and external URLs untouched
-              if (typeof imgUrl === 'string' && imgUrl.startsWith('/images/')) {
-                const filePath = imgUrl.replace('/images/', '');
-                const signedUrl = await getSignedB2Url(filePath, env);
-                // Fallback to original URL if signing fails
-                return signedUrl || imgUrl;
-              }
-              return imgUrl;
-            }));
-            return { ...product, images: signedImages };
+            const signedImages = product.images.map((imgUrl) => {
+  // Only rewrite internal images to go through your /images/ proxy
+  if (typeof imgUrl === 'string' && imgUrl.startsWith('/images/')) {
+    return imgUrl; // keep /images/... format; the proxy will handle signing
+  }
+  return imgUrl; // leave avatars or external URLs untouched
+});
+
+return { ...product, images: signedImages };
           }
           return product;
         }));

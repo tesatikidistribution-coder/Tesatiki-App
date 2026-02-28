@@ -527,7 +527,9 @@ async loadDashboard() {
   }
 
   renderProductCard(product, status) {
-    const image = product.images && product.images[0] ? product.images[0] : 'placeholder.png';
+    const image = product.images && product.images[0] 
+  ? `/images/${product.images[0].replace(/^\/?images\//, '')}` 
+  : 'placeholder.png';
     const statusClass = `status-${status}`;
 
     let actions = '';
@@ -1137,8 +1139,8 @@ window.viewProduct = async function(productId) {
       <p>Ad Type: ${data.ad_type || 'free'}</p>
       ${data.expires_at ? `<p>Expires: ${window.adminApp.formatDate(data.expires_at)}</p>` : ''}
       <div style="margin-top: 10px;">
-        ${data.images?.map(img => `<img src="${img}" style="width: 100px; margin-right: 5px;">`).join('') || ''}
-      </div>
+  ${data.images?.map(img => `<img src="/images/${img.replace(/^\/?images\//, '')}" style="width: 100px; margin-right: 5px;">`).join('') || ''}
+</div>
       <p style="margin-top: 10px;">Description: ${data.description || 'No description'}</p>
     `;
 
