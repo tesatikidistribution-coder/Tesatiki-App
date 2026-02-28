@@ -47,8 +47,7 @@ async function randomBytes(length = 16) {
 }
 
 function toHex(buffer) {
-  return Array.from(new Uint8Array(buffer))
-    .map(b => b.toString(16).padStart(2, '0'))
+  return Array.from(new Uint8Array(buffer))    .map(b => b.toString(16).padStart(2, '0'))
     .join('');
 }
 
@@ -97,8 +96,7 @@ function validatePassword(password) {
   if (!/[0-9]/.test(password)) {
     return { valid: false, error: 'Password must contain at least one number' };
   }
-  return { valid: true };
-}
+  return { valid: true };}
 
 // PBKDF2 password hashing: returns string "pbkdf2$<iterations>$<saltHex>$<hashBase64url>"
 async function hashPassword(password, iterations = PBKDF2_ITERATIONS) {
@@ -147,8 +145,7 @@ async function verifyPassword(password, stored) {
   const derivedB64Url = base64UrlEncode(derived);
   
   // Constant-time compare to prevent timing attacks
-  return constantTimeEqual(derivedB64Url, expectedB64Url);
-}
+  return constantTimeEqual(derivedB64Url, expectedB64Url);}
 
 // Constant-time string comparison
 function constantTimeEqual(a, b) {
@@ -197,8 +194,7 @@ async function verifyJWT(token, env) {
       'raw',
       enc.encode(env.JWT_SECRET),
       { name: 'HMAC', hash: 'SHA-256' },
-      false,
-      ['verify']
+      false,      ['verify']
     );
     
     const sig = base64UrlDecode(sig64);
@@ -247,8 +243,7 @@ async function getUserById(id, env) {
     headers: svcHeaders(env)
   });
   if (!res.ok) return null;
-  const arr = await res.json();
-  return arr && arr.length > 0 ? arr[0] : null;
+  const arr = await res.json();  return arr && arr.length > 0 ? arr[0] : null;
 }
 
 // ========================
@@ -297,14 +292,45 @@ async function getB2Auth(env) {
   const authResp = await fetch("https://api.backblazeb2.com/b2api/v2/b2_authorize_account", {
     headers: {
       Authorization: "Basic " + btoa(`${env.B2_KEY_ID}:${env.B2_APP_KEY}`)
-    }
-  });
+    }  });
 
   if (!authResp.ok) throw new Error("B2 authorization failed");
 
   cachedAuth = await authResp.json();
   authTimestamp = now;
   return cachedAuth;
+}
+
+// ========================
+// ⭐ NEW: Generate signed B2 download URL (valid 1 hour)
+// ========================
+async function getSignedB2Url(filePath, env) {
+  try {
+    const authData = await getB2Auth(env);
+    const resp = await fetch(`${authData.apiUrl}/b2api/v2/b2_get_download_url_with_auth`, {
+      method: 'POST',
+      headers: {
+        Authorization: authData.authorizationToken,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        bucketId: env.B2_BUCKET_ID,
+        fileName: filePath,
+        validDurationInSeconds: 3600 // 1 hour
+      })
+    });
+    
+    if (!resp.ok) {
+      console.warn(`⚠️ Failed to sign URL for ${filePath}: ${resp.status}`);
+      return null;
+    }
+    
+    const data = await resp.json();
+    return data.authorizationUrl || null;
+  } catch (err) {
+    console.warn(`⚠️ Error signing URL for ${filePath}:`, err.message);
+    return null;
+  }
 }
 
 // ========================
@@ -315,8 +341,7 @@ async function deleteImagesFromB2(imageUrls, env) {
     return { success: true, deleted: 0 };
   }
 
-  const authData = await getB2Auth(env);
-  let deletedCount = 0;
+  const authData = await getB2Auth(env);  let deletedCount = 0;
   const errors = [];
 
   for (const url of imageUrls) {
@@ -365,8 +390,7 @@ async function deleteImagesFromB2(imageUrls, env) {
 
         if (!listData.files || listData.files.length === 0) {
           keepPaging = false;
-          break;
-        }
+          break;        }
 
         for (const f of listData.files) {
           if (f.fileName === filename) {
@@ -415,8 +439,7 @@ async function deleteImagesFromB2(imageUrls, env) {
         }
       }
     } catch (err) {
-      errors.push(`Error deleting ${url}: ${err.message}`);
-    }
+      errors.push(`Error deleting ${url}: ${err.message}`);    }
   }
 
   return {
@@ -465,8 +488,7 @@ async function requireAuth(request, env) {
   const token = authHeader.slice(7);
   const payload = await verifyJWT(token, env);
   if (!payload) return null;
-  return payload;
-}
+  return payload;}
 
 // ========================
 // SCHEDULED TASK: Ad Expiry & Cleanup
@@ -515,8 +537,7 @@ async function handleScheduledTask(env) {
       `${SUPABASE_REST_PRODUCTS}?ad_type=eq.free&expires_at=lt.${now}&status=eq.approved&select=id,name,created_at,expires_at,images`,
       { headers: svcHeaders(env) }
     );
-    
-    if (deleteResponse.ok) {
+        if (deleteResponse.ok) {
       const expiredFreeAds = await deleteResponse.json();
       if (expiredFreeAds && expiredFreeAds.length > 0) {
         for (const ad of expiredFreeAds) {
@@ -555,7 +576,7 @@ export default {
     // ========================
     // ⭐ GET APPROVED PRODUCTS (PUBLIC - NO AUTH REQUIRED)
     // GET /api/get-products
-    // Returns cached list of approved products
+    // Returns cached list of approved products with signed image URLs
     // Anyone can view - logged in or not
     // ========================
     if (pathname === '/api/get-products' && request.method === 'GET') {
@@ -565,8 +586,7 @@ export default {
         
         // Check Cloudflare cache first
         let cachedResponse = await cache.match(cacheKey);
-        if (cachedResponse) {
-          console.log('📦 Returning cached products (10 min cache)');
+        if (cachedResponse) {          console.log('📦 Returning cached products (10 min cache)');
           return new Response(cachedResponse.body, {
             ...cachedResponse,
             headers: {
@@ -593,11 +613,29 @@ export default {
 
         const products = await prodResp.json();
 
-        // Build response
-        const responseBody = JSON.stringify(products);
+        // ⭐ Transform product.images to use signed B2 URLs (valid 1 hour)
+        const productsWithSignedUrls = await Promise.all(products.map(async (product) => {
+          if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+            const signedImages = await Promise.all(product.images.map(async (imgUrl) => {
+              // Only sign URLs that point to our B2 bucket (/images/<filename> format)
+              // Leave avatars and external URLs untouched
+              if (typeof imgUrl === 'string' && imgUrl.startsWith('/images/')) {
+                const filePath = imgUrl.replace('/images/', '');
+                const signedUrl = await getSignedB2Url(filePath, env);
+                // Fallback to original URL if signing fails
+                return signedUrl || imgUrl;
+              }
+              return imgUrl;
+            }));
+            return { ...product, images: signedImages };
+          }
+          return product;
+        }));
+
+        // Build response with signed URLs
+        const responseBody = JSON.stringify(productsWithSignedUrls);
         const cacheResponse = new Response(responseBody, {
-          status: 200,
-          headers: {
+          status: 200,          headers: {
             'content-type': 'application/json',
             'Cache-Control': `public, max-age=${PRODUCT_CACHE_TTL}`,
             'X-Cache': 'MISS'
@@ -646,8 +684,7 @@ export default {
 
         // Validate password
         const passwordValidation = validatePassword(password);
-        if (!passwordValidation.valid) {
-          return new Response(JSON.stringify({ error: passwordValidation.error }), {
+        if (!passwordValidation.valid) {          return new Response(JSON.stringify({ error: passwordValidation.error }), {
             status: 400,
             headers: { 'content-type': 'application/json' }
           });
@@ -696,7 +733,6 @@ export default {
         });
       }
     }
-
     // ========================
     // AUTH: LOGIN
     // POST /api/login
@@ -746,8 +782,7 @@ export default {
         // Issue JWT
         const token = await signJWT({ userId: user.id, role: (user.role || 'user') }, env);
 
-        return new Response(JSON.stringify({ token, user: safeUser }), {
-          headers: { 'content-type': 'application/json' }
+        return new Response(JSON.stringify({ token, user: safeUser }), {          headers: { 'content-type': 'application/json' }
         });
       } catch (err) {
         return new Response(JSON.stringify({ error: err.message }), {
@@ -796,8 +831,7 @@ export default {
         const payload = await requireAuth(request, env);
         if (!payload) {
           return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-            status: 401,
-            headers: { 'content-type': 'application/json' }
+            status: 401,            headers: { 'content-type': 'application/json' }
           });
         }
 
@@ -846,7 +880,6 @@ export default {
             headers: { 'content-type': 'application/json' }
           });
         }
-
         if (Object.keys(updates).length === 0) {
           return new Response(JSON.stringify({ error: 'No valid fields to update' }), {
             status: 400,
@@ -896,8 +929,7 @@ export default {
         const payload = await requireAuth(request, env);
         if (!payload) {
           return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-            status: 401,
-            headers: { 'content-type': 'application/json' }
+            status: 401,            headers: { 'content-type': 'application/json' }
           });
         }
 
@@ -946,8 +978,7 @@ export default {
         }
 
         const passwordMatch = await verifyPassword(currentPassword, storedHash);
-        if (!passwordMatch) {
-          return new Response(JSON.stringify({ error: 'Current password is incorrect' }), {
+        if (!passwordMatch) {          return new Response(JSON.stringify({ error: 'Current password is incorrect' }), {
             status: 401,
             headers: { 'content-type': 'application/json' }
           });
@@ -996,8 +1027,7 @@ export default {
       }
       
       try {
-        const { userId, newPassword } = await request.json();
-        if (!userId || !newPassword) {
+        const { userId, newPassword } = await request.json();        if (!userId || !newPassword) {
           return new Response(JSON.stringify({ error: 'userId and newPassword required' }), { status: 400 });
         }
 
@@ -1047,7 +1077,6 @@ export default {
           headers: svcHeaders(env),
           body: JSON.stringify({ is_verified: false })
         });
-
         if (!updateResp.ok) {
           const txt = await updateResp.text();
           return new Response(JSON.stringify({ error: 'Failed to unverify user', details: txt }), { status: 500 });
@@ -1096,8 +1125,7 @@ export default {
       }
     }
 
-    // ========================
-    // ADMIN: DELETE USER PERMANENTLY
+    // ========================    // ADMIN: DELETE USER PERMANENTLY
     // POST /api/admin/delete-user
     // ========================
     if (pathname === '/api/admin/delete-user' && request.method === 'POST') {
@@ -1147,7 +1175,6 @@ export default {
         return new Response(JSON.stringify({ error: err.message }), { status: 500 });
       }
     }
-
     // ========================
     // CREATE PRODUCT
     // POST /api/create-product
@@ -1196,7 +1223,6 @@ export default {
             headers: { 'content-type': 'application/json' }
           });
         }
-
         const created = await insertResp.json();
         return new Response(JSON.stringify({ success: true, product: created[0] || null }), {
           headers: { 'content-type': 'application/json' }
@@ -1246,8 +1272,7 @@ export default {
             status: 500,
             headers: { 'content-type': 'application/json' }
           });
-        }
-        
+        }        
         const prodArr = await prodResp.json();
         if (!prodArr || prodArr.length === 0) {
           return new Response(JSON.stringify({ error: 'Product not found' }), {
@@ -1296,8 +1321,7 @@ export default {
             
           } else if (currentProduct.status === 'pending') {
             // User is editing a PENDING (new) listing → keep it pending
-            cleanUpdates.status = 'pending';
-            
+            cleanUpdates.status = 'pending';            
           } else {
             // Default: keep current status
             cleanUpdates.status = currentProduct.status;
@@ -1346,8 +1370,7 @@ export default {
           });
         }
 
-        const body = await request.json();
-        const { images, productId } = body;
+        const body = await request.json();        const { images, productId } = body;
         
         if (!images || !Array.isArray(images)) {
           return new Response(JSON.stringify({ error: 'images array required' }), {
@@ -1396,7 +1419,6 @@ export default {
         });
       }
     }
-
     // ========================
     // DELETE PRODUCT
     // POST /api/delete-product
@@ -1446,8 +1468,7 @@ export default {
           });
         }
 
-        const result = await deleteProductWithImages(productId, env);
-        return new Response(JSON.stringify(result), {
+        const result = await deleteProductWithImages(productId, env);        return new Response(JSON.stringify(result), {
           status: result.success ? 200 : 500,
           headers: { 'content-type': 'application/json' }
         });
@@ -1496,8 +1517,7 @@ export default {
           headers: {
             Authorization: uploadData.authorizationToken,
             "X-Bz-File-Name": encodeURIComponent(filename),
-            "Content-Type": file.type,
-            "X-Bz-Content-Sha1": "do_not_verify"
+            "Content-Type": file.type,            "X-Bz-Content-Sha1": "do_not_verify"
           },
           body: buffer
         });
@@ -1522,11 +1542,13 @@ export default {
     }
 
     // ========================
-    // IMAGE PROXY - FIXED VERSION
+    // IMAGE PROXY - SIGNED URL VERSION ⭐
     // GET /images/<path>
-    // ✅ Properly fetches from private B2 bucket
-    // ✅ Returns proper headers
-    // ✅ Safe error handling - no 500 errors
+    // ✅ Generates signed URLs for private B2 bucket
+    // ✅ Valid for 1 hour (3600 seconds)
+    // ✅ Fetches image via signed URL
+    // ✅ Returns image with proper headers
+    // ✅ Safe error handling - no crashes
     // ✅ Returns clean 404 for missing files
     // ========================
     if (pathname.startsWith('/images/')) {
@@ -1544,8 +1566,7 @@ export default {
         
         // Validate file path (prevent directory traversal)
         if (!filePath || filePath.includes('..') || filePath.startsWith('/')) {
-          return new Response('Invalid file path', { status: 400 });
-        }
+          return new Response('Invalid file path', { status: 400 });        }
 
         // Get B2 authentication
         let authData;
@@ -1556,38 +1577,69 @@ export default {
           return new Response('Service temporarily unavailable', { status: 503 });
         }
 
-        // Build B2 download URL and fetch
-        const fileUrl = `${authData.downloadUrl}/file/${env.B2_BUCKET}/${filePath}`;
-        
+        // Get signed download URL from B2 API
+        let signedUrlResp;
+        try {
+          signedUrlResp = await fetch(`${authData.apiUrl}/b2api/v2/b2_get_download_url_with_auth`, {
+            method: 'POST',
+            headers: {
+              Authorization: authData.authorizationToken,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              bucketId: env.B2_BUCKET_ID,
+              fileName: filePath,
+              validDurationInSeconds: 3600 // 1 hour
+            })
+          });
+        } catch (urlErr) {
+          console.error('❌ Failed to generate signed URL:', urlErr.message);
+          return new Response('Failed to generate signed URL', { status: 502 });
+        }
+
+        // Check if signed URL generation failed
+        if (!signedUrlResp.ok) {
+          const errData = await signedUrlResp.json().catch(() => ({}));
+          console.error(`❌ B2 signed URL error ${signedUrlResp.status}:`, errData);
+          
+          // If file not found
+          if (signedUrlResp.status === 404) {
+            return new Response('Not found', { status: 404 });
+          }
+          
+          return new Response('Failed to generate signed URL', { status: 502 });
+        }
+
+        const signedData = await signedUrlResp.json();
+        const signedUrl = signedData.authorizationUrl;
+
+        if (!signedUrl) {
+          console.error('❌ No authorization URL in response');
+          return new Response('Failed to generate signed URL', { status: 502 });        }
+
+        // Fetch the image using the signed URL
         let imageResp;
         try {
-          imageResp = await fetch(fileUrl, {
-            headers: { 
-              Authorization: authData.authorizationToken,
-              'Range': request.headers.get('Range') || undefined
-            }
-          });
+          imageResp = await fetch(signedUrl);
         } catch (fetchErr) {
-          console.error('❌ B2 fetch failed:', fetchErr.message);
+          console.error('❌ Failed to fetch image via signed URL:', fetchErr.message);
           return new Response('Failed to fetch image', { status: 502 });
         }
 
-        // Handle 404 - file not found in B2
+        // Handle 404 - file not found
         if (imageResp.status === 404) {
-          console.log(`📭 Image not found in B2: ${filePath}`);
           return new Response('Not found', { status: 404 });
         }
 
-        // Handle other B2 errors
+        // Handle other errors
         if (!imageResp.ok) {
-          console.error(`❌ B2 error ${imageResp.status}: ${filePath}`);
+          console.error(`❌ Error fetching image: ${imageResp.status}`);
           return new Response('Failed to retrieve image', { status: 502 });
         }
 
         // Build response with proper headers
         let response = new Response(imageResp.body, {
           status: imageResp.status,
-          statusText: imageResp.statusText,
           headers: {
             'Content-Type': imageResp.headers.get('Content-Type') || 'application/octet-stream',
             'Content-Length': imageResp.headers.get('Content-Length') || '',
@@ -1596,14 +1648,6 @@ export default {
             'X-Content-Type-Options': 'nosniff'
           }
         });
-
-        // Preserve range request headers if applicable
-        if (imageResp.status === 206) {
-          const contentRange = imageResp.headers.get('Content-Range');
-          if (contentRange) {
-            response.headers.set('Content-Range', contentRange);
-          }
-        }
 
         // Cache the response
         try {
@@ -1620,7 +1664,6 @@ export default {
         return new Response('Internal server error', { status: 500 });
       }
     }
-
     // ========================
     // MANUAL SCHEDULED TRIGGER
     // POST /api/run-scheduled-task
