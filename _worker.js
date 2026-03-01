@@ -1502,7 +1502,7 @@ export default {
       
       try {
         // Extract file path
-        const filePath = pathname.replace('/images/products/', '');
+        const filePath = pathname.replace('/images/', '');
         
         // Validate file path (prevent directory traversal)
         if (!filePath || filePath.includes('..') || filePath.startsWith('/')) {
