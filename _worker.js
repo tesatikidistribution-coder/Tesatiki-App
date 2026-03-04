@@ -28,6 +28,18 @@ let cachedAuth = null;
 let authTimestamp = 0;
 
 // ========================
+// SOCIAL CRAWLER DETECTION
+// ========================
+function isStrictCrawler(userAgent) {
+  if (!userAgent) return false;
+  const ua = userAgent.toLowerCase();
+  // Facebook and Telegram are strict about redirects
+  return ua.includes('facebookexternalhit') || 
+         ua.includes('facebot') || 
+         ua.includes('telegrambot');
+}
+
+// ========================
 // Crypto helpers
 // ========================
 async function randomBytes(length = 16) {
@@ -612,7 +624,17 @@ if (product.images && Array.isArray(product.images) && product.images.length > 0
     const productUrl = `${baseUrl}/?id=${encodeURIComponent(productId)}`;
     const ogImageUrl = imageUrl ? (imageUrl.startsWith('http') ? imageUrl : `${baseUrl}${imageUrl}`) : '';
 
-    // Build minimal HTML with OG tags + instant redirect
+    // Detect strict crawlers (Facebook, Telegram)
+    const userAgent = request.headers.get('user-agent') || '';
+    const isStrict = isStrictCrawler(userAgent);
+    const redirectDelay = isStrict ? 2 : 0; // 2 second delay for strict crawlers
+    
+    // Log for debugging
+    if (isStrict) {
+      console.log(`🤖 [OG] Strict crawler detected: ${userAgent} - using ${redirectDelay}s delay`);
+    }
+
+    // Build HTML with crawler-aware redirect
     const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -627,10 +649,10 @@ if (product.images && Array.isArray(product.images) && product.images.length > 0
   <meta property="og:description" content="${description}">
   ${ogImageUrl ? `
   <meta property="og:image" content="${ogImageUrl}">
-  <meta property="og:image:width" content="1200">
-  <meta property="og:image:height" content="630">
-` : ''}
+  <meta property="og:image:secure_url" content="${ogImageUrl}">
+  <meta property="og:image:type" content="image/webp">
   <meta property="og:image:alt" content="${title}">
+` : ''}
   
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
@@ -639,12 +661,22 @@ if (product.images && Array.isArray(product.images) && product.images.length > 0
   <meta name="twitter:description" content="${description}">
   ${ogImageUrl ? `<meta name="twitter:image" content="${ogImageUrl}">` : ''}
   
-  <!-- Instant redirect (meta + JS fallback) -->
-  <meta http-equiv="refresh" content="0;url=${productUrl}">
-  <script>window.location.replace('${productUrl}');</script>
+  <!-- Crawler-aware redirect -->
+  <meta http-equiv="refresh" content="${redirectDelay};url=${productUrl}">
+  <script>
+    // Delayed redirect for strict crawlers
+    ${isStrict ? `
+    setTimeout(function() {
+      window.location.replace('${productUrl}');
+    }, ${redirectDelay * 1000});
+    ` : `window.location.replace('${productUrl}');`}
+  </script>
 </head>
 <body>
-  <p style="font-family:sans-serif;text-align:center;padding:2rem">Redirecting to product page...<br><a href="${productUrl}">Click here if not redirected</a></p>
+  <p style="font-family:sans-serif;text-align:center;padding:2rem">
+    Redirecting to product page...<br>
+    <a href="${productUrl}">Click here if not redirected</a>
+  </p>
 </body>
 </html>`;
     return new Response(html, {
