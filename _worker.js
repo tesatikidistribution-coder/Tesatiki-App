@@ -617,6 +617,7 @@ if (product.images && Array.isArray(product.images) && product.images.length > 0
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta property="og:locale" content="en_US">
   <title>${title}</title>
   
   <!-- Open Graph / Facebook -->
@@ -624,7 +625,12 @@ if (product.images && Array.isArray(product.images) && product.images.length > 0
   <meta property="og:url" content="${productUrl}">
   <meta property="og:title" content="${title}">
   <meta property="og:description" content="${description}">
-  ${ogImageUrl ? `<meta property="og:image" content="${ogImageUrl}">` : ''}
+  ${ogImageUrl ? `
+  <meta property="og:image" content="${ogImageUrl}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:type" content="image/webp">
+` : ''}
   <meta property="og:image:alt" content="${title}">
   
   <!-- Twitter Card -->
