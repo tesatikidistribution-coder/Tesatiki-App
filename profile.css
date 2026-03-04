@@ -330,6 +330,7 @@ body {
 
 .listing-actions {
   display: flex;
+  flex-direction: column;
   gap: var(--spacing-xs);
   margin-top: var(--spacing-xs);
 }
@@ -366,6 +367,16 @@ body {
 
 .delete-btn-listing:hover {
   background: #ef4444;
+  color: white;
+}
+
+.share-btn {
+  background: rgba(255, 103, 1, 0.1);
+  color: #ff6701;
+}
+
+.share-btn:hover {
+  background: #ff6701;
   color: white;
 }
 
