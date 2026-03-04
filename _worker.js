@@ -587,20 +587,25 @@ if (pathname.startsWith('/p/') && request.method === 'GET') {
       ? (product.description.substring(0, 200) + (product.description.length > 200 ? '...' : '')).replace(/"/g, '&quot;')
       : 'Check out this product';
     
-    // Get first image for og:image (reuse existing proxy logic)    let imageUrl = '';
-    if (product.images && Array.isArray(product.images) && product.images.length > 0) {
-      const firstImg = product.images[0];
-      if (typeof firstImg === 'string') {
-        if (firstImg.startsWith('/images/')) {
-          imageUrl = firstImg;
-        } else if (firstImg.includes('products/')) {
-          const filename = firstImg.split('products/')[1];
-          imageUrl = `/images/products/${filename}`;
-        } else {
-          imageUrl = firstImg; // external URL or avatar
-        }
-      }
+    // Get first image for og:image
+let imageUrl = '';
+if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+  const firstImg = product.images[0];
+  if (typeof firstImg === 'string') {
+    // If it starts with /images/, use as-is (already in proxy format)
+    if (firstImg.startsWith('/images/')) {
+      imageUrl = firstImg;
     }
+    // If it's a full URL
+    else if (firstImg.startsWith('http')) {
+      imageUrl = firstImg;
+    }
+    // Otherwise wrap with /images/
+    else {
+      imageUrl = `/images/${firstImg}`;
+    }
+  }
+}
     
     // Build absolute URLs for OG tags
     const baseUrl = url.origin;
