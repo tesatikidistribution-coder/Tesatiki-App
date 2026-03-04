@@ -629,7 +629,6 @@ if (product.images && Array.isArray(product.images) && product.images.length > 0
   <meta property="og:image" content="${ogImageUrl}">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
-  <meta property="og:image:type" content="image/webp">
 ` : ''}
   <meta property="og:image:alt" content="${title}">
   
