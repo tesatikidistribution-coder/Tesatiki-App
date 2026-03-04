@@ -319,22 +319,31 @@ async function loadListings() {
               minimumFractionDigits: 0 
             }).format(item.price)}</p>
             <div class="listing-actions">
-              <button class="action-btn edit-btn-listing" data-id="${item.id}">
-                <i class='bx bx-edit'></i> Edit
-              </button>
-              <button class="action-btn delete-btn-listing" data-id="${item.id}">
-                <i class='bx bx-trash'></i> Delete
-              </button>
-            </div>
-          </div>
-        `;
+  <button class="action-btn edit-btn-listing" data-id="${item.id}">
+    <i class='bx bx-edit'></i> Edit
+  </button>
+
+  <button class="action-btn delete-btn-listing" data-id="${item.id}">
+    <i class='bx bx-trash'></i> Delete
+  </button>
+
+  <button class="action-btn share-btn"
+    data-id="${item.id}"
+    data-name="${item.name}"
+    data-price="${item.price}"
+    data-image="${firstImage}">
+    <i class='bx bx-share-alt'></i> Share
+  </button>
+</div>
+ </div>
+  `;
         
         // FIX: Click anywhere on card (except action buttons) to view product
         card.addEventListener('click', (e) => {
-          if (!e.target.closest('.listing-actions')) {
-            window.location.href = `product.html?id=${item.id}`;
-          }
-        });
+  if (!e.target.closest('.listing-actions')) {
+    window.location.href = `/p/${item.id}`;
+  }
+});
         
         listingsContainer.appendChild(card);
       });
@@ -393,6 +402,51 @@ function attachListingActions() {
       }
     });
   });
+
+  // ⭐ SHARE BUTTON HANDLER
+  document.querySelectorAll('.share-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const productId = btn.dataset.id;
+      const productName = btn.dataset.name;
+      const productPrice = btn.dataset.price;
+      const productImage = btn.dataset.image;
+      
+      shareProduct(productId, productName, productPrice, productImage);
+    });
+  });
+}
+
+// ================= SHARE PRODUCT =================
+/**
+ * FIX: Share product with social media preview
+ * REASON: Uses /p/:id route which generates Open Graph tags
+ */
+function shareProduct(productId, productName, productPrice, productImage) {
+  // Construct share URL using /p/:id route (OG preview route)
+  const shareUrl = `${window.location.origin}/p/${productId}`;
+  
+  // Format price with currency
+  const formattedPrice = `UGX ${parseInt(productPrice).toLocaleString()}`;
+  
+  // Create share text
+  const shareText = `${productName} - ${formattedPrice}. Check it out on Tesatiki!`;
+
+  // Use Web Share API if available
+  if (navigator.share) {
+    navigator.share({
+      title: productName,
+      text: shareText,
+      url: shareUrl
+    }).catch(err => console.log('Share cancelled:', err));
+  } else {
+    // Fallback: Copy to clipboard + show message
+    navigator.clipboard.writeText(shareUrl).then(() => {
+      alert('✅ Product link copied to clipboard!\n\n' + shareUrl);
+    }).catch(() => {
+      alert('Share this link:\n\n' + shareUrl);
+    });
+  }
 }
 
 // ================= PROFILE EDIT VIEW TOGGLE =================

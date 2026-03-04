@@ -785,6 +785,28 @@ function initLazyImages() {
   }
 }
 
+// ================= AUTO-OPEN PRODUCT FROM SHARE LINK =================
+function handleProductFromShareLink() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const productId = urlParams.get('id');
+  
+  if (productId && window.tesatiki && window.tesatiki.allProducts) {
+    console.log('🔗 Opening product from share link:', productId);
+    
+    // Find product by ID
+    const product = window.tesatiki.allProducts.find(p => p.id === productId);
+    
+    if (product) {
+      setTimeout(() => {
+        openProduct(product);
+        console.log('✅ Product modal opened from share link');
+      }, 500); // Wait for DOM to be ready
+    } else {
+      console.warn('⚠️ Product not found with ID:', productId);
+    }
+  }
+}
+
 // ================= INITIALIZE =================
 document.addEventListener('DOMContentLoaded', () => {
   console.log('🚀 Tesatiki App Starting...');
@@ -793,6 +815,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // lazy-load product images after initial render
   setTimeout(initLazyImages, 500); // slight delay to ensure product cards exist
+  
+  // ⭐ Auto-open product from share link if ?id= is present
+  handleProductFromShareLink();
   
   console.log('✅ Tesatiki App Ready');
 });

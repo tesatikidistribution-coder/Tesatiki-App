@@ -538,6 +538,122 @@ export default {
       });
     }
 
+// ========================
+// 📱 SOCIAL SHARE PREVIEW ROUTE
+// GET /p/:id - Returns OG tags + instant redirect to /product.html?id=:id
+// ========================
+if (pathname.startsWith('/p/') && request.method === 'GET') {
+  const productId = pathname.slice(3); // Remove '/p/'
+  
+  // Validate product ID exists
+  if (!productId || productId.trim() === '') {
+    return new Response('<!DOCTYPE html><html><head><title>Bad Request</title></head><body><h1>400 Bad Request</h1><p>Missing product ID</p></body></html>', {
+      status: 400,
+      headers: { 'content-type': 'text/html; charset=utf-8' }
+    });
+  }
+
+  try {
+    // Fetch product from Supabase using existing helpers
+    const prodResp = await fetch(
+      `${SUPABASE_REST_PRODUCTS}?id=eq.${encodeURIComponent(productId)}&select=id,name,description,images,price,category,location`,
+      { headers: svcHeaders(env) }
+    );
+
+    // Handle product not found
+    if (!prodResp.ok) {
+      if (prodResp.status === 404 || prodResp.status === 406) {
+        return new Response('<!DOCTYPE html><html><head><title>Not Found</title></head><body><h1>404 Not Found</h1><p>Product not found</p></body></html>', {
+          status: 404,
+          headers: { 'content-type': 'text/html; charset=utf-8' }
+        });
+      }
+      throw new Error(`Supabase error: ${prodResp.status}`);
+    }
+
+    const products = await prodResp.json();
+    if (!products || products.length === 0) {
+      return new Response('<!DOCTYPE html><html><head><title>Not Found</title></head><body><h1>404 Not Found</h1><p>Product not found</p></body></html>', {
+        status: 404,
+        headers: { 'content-type': 'text/html; charset=utf-8' }
+      });
+    }
+
+    const product = products[0];
+    
+    // Prepare OG tag values with sanitization
+    const title = (product.name || 'Product').replace(/"/g, '&quot;');
+    const description = product.description 
+      ? (product.description.substring(0, 200) + (product.description.length > 200 ? '...' : '')).replace(/"/g, '&quot;')
+      : 'Check out this product';
+    
+    // Get first image for og:image (reuse existing proxy logic)    let imageUrl = '';
+    if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+      const firstImg = product.images[0];
+      if (typeof firstImg === 'string') {
+        if (firstImg.startsWith('/images/')) {
+          imageUrl = firstImg;
+        } else if (firstImg.includes('products/')) {
+          const filename = firstImg.split('products/')[1];
+          imageUrl = `/images/products/${filename}`;
+        } else {
+          imageUrl = firstImg; // external URL or avatar
+        }
+      }
+    }
+    
+    // Build absolute URLs for OG tags
+    const baseUrl = url.origin;
+    const productUrl = `${baseUrl}/?id=${encodeURIComponent(productId)}`;
+    const ogImageUrl = imageUrl ? (imageUrl.startsWith('http') ? imageUrl : `${baseUrl}${imageUrl}`) : '';
+
+    // Build minimal HTML with OG tags + instant redirect
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>${title}</title>
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="product">
+  <meta property="og:url" content="${productUrl}">
+  <meta property="og:title" content="${title}">
+  <meta property="og:description" content="${description}">
+  ${ogImageUrl ? `<meta property="og:image" content="${ogImageUrl}">` : ''}
+  <meta property="og:image:alt" content="${title}">
+  
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:url" content="${productUrl}">
+  <meta name="twitter:title" content="${title}">
+  <meta name="twitter:description" content="${description}">
+  ${ogImageUrl ? `<meta name="twitter:image" content="${ogImageUrl}">` : ''}
+  
+  <!-- Instant redirect (meta + JS fallback) -->
+  <meta http-equiv="refresh" content="0;url=${productUrl}">
+  <script>window.location.replace('${productUrl}');</script>
+</head>
+<body>
+  <p style="font-family:sans-serif;text-align:center;padding:2rem">Redirecting to product page...<br><a href="${productUrl}">Click here if not redirected</a></p>
+</body>
+</html>`;
+    return new Response(html, {
+      status: 200,
+      headers: {
+        'content-type': 'text/html; charset=utf-8',
+        'cache-control': 'public, max-age=60, s-maxage=300' // Brief cache for social crawlers
+      }
+    });
+
+  } catch (err) {
+    console.error(`Error in /p/${productId}:`, err);
+    return new Response('<!DOCTYPE html><html><head><title>Server Error</title></head><body><h1>500 Server Error</h1><p>Something went wrong</p></body></html>', {
+      status: 500,
+      headers: { 'content-type': 'text/html; charset=utf-8' }
+    });
+  }
+}
+
     // ========================
     // ⭐ GET APPROVED PRODUCTS (PUBLIC - NO AUTH REQUIRED)
     // GET /api/get-products
