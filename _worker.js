@@ -1,7 +1,7 @@
 // _worker.js - PRODUCTION-READY VERSION (IMAGES FIXED)
 // ✅ All functionality preserved
 // ✅ Image proxy fully working with correct B2 API endpoints
-// ✅ Detailed error reporting with debugging
+// ✅ Detailed error reporting with debugging 
 
 const SUPABASE_URL = "https://gpkufzayrvfippxqfafa.supabase.co";
 const SUPABASE_REST_USERS = `${SUPABASE_URL}/rest/v1/users`;
