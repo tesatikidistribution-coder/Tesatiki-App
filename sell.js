@@ -194,9 +194,9 @@ async function updateImageLimits() {
     const plan = AD_PLANS[selectedAdType];
     
     if (plan) {
-    maxImages = currentUserRole === 'agent'
-        ? Math.min(plan.maxImages, MAX_IMAGES_AGENT)
-        : plan.maxImages;
+    maxImages = (currentUserRole === 'agent' && selectedAdType === 'free')
+    ? MAX_IMAGES_AGENT
+    : plan.maxImages;
     updatePhotoCounter();
     
     // Update price display
