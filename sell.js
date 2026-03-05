@@ -194,16 +194,18 @@ async function updateImageLimits() {
     const plan = AD_PLANS[selectedAdType];
     
     if (plan) {
-        maxImages = plan.maxImages;
-        updatePhotoCounter();
-        
-        // Update price display
-        adPriceDisplay.textContent = plan.price === 0
-            ? "Price: Free"
-            : `Price: UGX ${plan.price.toLocaleString()} (${plan.duration} days)`;
-        
-        // 🔧 Agent role logic added - Update image limit display with dynamic info
-        adImageLimitDisplay.textContent = `Image limit: ${plan.maxImages} photo${plan.maxImages > 1 ? 's' : ''}`;
+    maxImages = currentUserRole === 'agent'
+        ? Math.min(plan.maxImages, MAX_IMAGES_AGENT)
+        : plan.maxImages;
+    updatePhotoCounter();
+    
+    // Update price display
+    adPriceDisplay.textContent = plan.price === 0
+        ? "Price: Free"
+        : `Price: UGX ${plan.price.toLocaleString()} (${plan.duration} days)`;
+    
+    // 🔧 Agent role logic added - Update image limit display with dynamic info
+    adImageLimitDisplay.textContent = `Image limit: ${maxImages} photo${maxImages > 1 ? 's' : ''}`;
         
         // Check if user needs to remove images
         const totalImages = existingImageUrls.length + uploadedImages.length;
