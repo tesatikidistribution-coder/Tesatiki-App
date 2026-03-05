@@ -667,14 +667,13 @@ async loadDashboard() {
 
     // Apply search
     if (searchTerm && searchTerm.trim() !== '') {
-      const term = searchTerm.toLowerCase().trim();
-      filtered = filtered.filter(u => {
-        const name = (u.full_name || '').toLowerCase();
-        const email = (u.email || '').toLowerCase();
-        
-        return name.includes(term) || email.includes(term);
-      });
-    }
+  const term = searchTerm.toLowerCase().trim();
+  filtered = filtered.filter(u => {
+    const name = (u.full_name || '').toLowerCase();
+    
+    return name.includes(term);
+  });
+}
 
     this.renderUsers(filtered);
   }
@@ -692,46 +691,68 @@ async loadDashboard() {
   }
 
   renderUserCard(user) {
-    const isVerified = user.is_verified === true;
+  const isVerified = user.is_verified === true;
+  const currentRole = user.role || 'user';
 
-    return `
-      <div class="user-card">
-        <img src="${user.avatar_url || 'default-avatar.png'}" 
-             alt="${user.full_name}" 
-             class="user-avatar-large"
-             onerror="this.src='default-avatar.png'">
-        <div class="user-info">
-          <h3>
-            ${user.full_name || 'Unknown User'}
-            ${isVerified ? '<i class="bx bxs-badge-check verified-badge"></i>' : ''}
-          </h3>
-          <p class="user-meta">📧 ${user.email || 'No email'}</p>
-          <p class="user-meta">📱 ${user.phone || 'No phone'}</p>
-          <p class="user-meta">📅 Joined ${this.formatDate(user.created_at)}</p>
-        </div>
-        <div class="user-actions">
-          ${!isVerified ? `
-            <button class="btn btn-success btn-sm" onclick="verifyUser('${user.id}')">
-              <i class='bx bx-badge-check'></i> Verify
+  return `
+    <div class="user-card">
+      <img src="${user.avatar_url || 'default-avatar.png'}" 
+           alt="${user.full_name}" 
+           class="user-avatar-large"
+           onerror="this.src='default-avatar.png'">
+      <div class="user-info">
+        <h3>
+          ${user.full_name || 'Unknown User'}
+          ${isVerified ? '<i class="bx bxs-badge-check verified-badge"></i>' : ''}
+        </h3>
+        <p class="user-meta">📱 ${user.phone || 'No phone'}</p>
+        <p class="user-meta">📅 Joined ${this.formatDate(user.created_at)}</p>
+        
+        <!-- 🔧 AGENT ROLE ASSIGNMENT LOGIC - Role Dropdown -->
+        <div class="role-selector" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #eee;">
+          <label style="display: block; font-size: 12px; color: #666; margin-bottom: 6px; font-weight: 500;">
+            User Role:
+          </label>
+          <div style="display: flex; gap: 8px; align-items: center;">
+            <select id="roleSelect_${user.id}" 
+                    class="role-dropdown"
+                    style="padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; background: #f5f5f5;">
+              <option value="user" ${currentRole === 'user' ? 'selected' : ''}>👤 User</option>
+              <option value="agent" ${currentRole === 'agent' ? 'selected' : ''}>🏢 Agent</option>
+              <option value="admin" ${currentRole === 'admin' ? 'selected' : ''}>🔑 Admin</option>
+            </select>
+            <button class="btn btn-sm" 
+                    onclick="saveUserRole('${user.id}')"
+                    style="padding: 6px 12px; font-size: 13px;">
+              <i class='bx bx-check'></i> Save
             </button>
-          ` : `
-            <button class="btn btn-warning btn-sm" onclick="unverifyUser('${user.id}')">
-              <i class='bx bx-x-circle'></i> Unverify
-            </button>
-          `}
-          <button class="btn btn-secondary btn-sm" onclick="resetUserPassword('${user.id}')">
-            <i class='bx bx-key'></i> Reset Password
-          </button>
-          <button class="btn btn-danger btn-sm" onclick="deleteUserPermanently('${user.id}')">
-            <i class='bx bx-trash'></i> Delete User
-          </button>
-          <button class="btn btn-secondary btn-sm" onclick="viewUserDetails('${user.id}')">
-            <i class='bx bx-show'></i> View
-          </button>
+          </div>
+          <small style="color: #999; display: block; margin-top: 4px;">Current: <strong>${currentRole}</strong></small>
         </div>
       </div>
-    `;
-  }
+      <div class="user-actions">
+        ${!isVerified ? `
+          <button class="btn btn-success btn-sm" onclick="verifyUser('${user.id}')">
+            <i class='bx bx-badge-check'></i> Verify
+          </button>
+        ` : `
+          <button class="btn btn-warning btn-sm" onclick="unverifyUser('${user.id}')">
+            <i class='bx bx-x-circle'></i> Unverify
+          </button>
+        `}
+        <button class="btn btn-secondary btn-sm" onclick="resetUserPassword('${user.id}')">
+          <i class='bx bx-key'></i> Reset Password
+        </button>
+        <button class="btn btn-danger btn-sm" onclick="deleteUserPermanently('${user.id}')">
+          <i class='bx bx-trash'></i> Delete User
+        </button>
+        <button class="btn btn-secondary btn-sm" onclick="viewUserDetails('${user.id}')">
+          <i class='bx bx-show'></i> View
+        </button>
+      </div>
+    </div>
+  `;
+}
 
   // ================= VERIFICATION REQUESTS =================
   async loadVerificationRequests() {
@@ -760,10 +781,9 @@ async loadDashboard() {
                  class="user-avatar-large"
                  onerror="this.src='default-avatar.png'">
             <div class="verification-info">
-              <h3>${request.users?.full_name || 'Unknown'}</h3>
-              <p class="user-meta">${request.users?.email || ''}</p>
-              <p class="user-meta">${request.users?.phone || ''}</p>
-            </div>
+  <h3>${request.users?.full_name || 'Unknown'}</h3>
+  <p class="user-meta">${request.users?.phone || ''}</p>
+</div>
           </div>
           <div class="verification-details">
             <div class="detail-item">
@@ -810,17 +830,16 @@ async loadDashboard() {
       }
 
       container.innerHTML = data.map(user => `
-        <div class="user-card">
-          <img src="${user.avatar_url || 'default-avatar.png'}" 
-               class="user-avatar-large"
-               onerror="this.src='default-avatar.png'">
-          <div class="user-info">
-            <h3>${user.full_name || 'Unknown'}</h3>
-            <p class="user-meta">📧 ${user.email || ''}</p>
-            <p class="user-meta">⏰ Expires: ${this.formatDate(user.premium_expires_at)}</p>
-          </div>
-        </div>
-      `).join('');
+  <div class="user-card">
+    <img src="${user.avatar_url || 'default-avatar.png'}" 
+         class="user-avatar-large"
+         onerror="this.src='default-avatar.png'">
+    <div class="user-info">
+      <h3>${user.full_name || 'Unknown'}</h3>
+      <p class="user-meta">⏰ Expires: ${this.formatDate(user.premium_expires_at)}</p>
+    </div>
+  </div>
+`).join('');
 
     } catch (error) {
       console.error('Error loading premium users:', error);
@@ -1166,13 +1185,12 @@ window.viewUserDetails = async function(userId) {
     if (error) throw error;
 
     const content = `
-      <h3>${data.full_name}</h3>
-      <p>Email: ${data.email || 'N/A'}</p>
-      <p>Phone: ${data.phone || 'N/A'}</p>
-      <p>Status: ${data.account_status}</p>
-      <p>Verified: ${data.is_verified ? 'Yes' : 'No'}</p>
-      <p>Joined: ${window.adminApp.formatDate(data.created_at)}</p>
-    `;
+  <h3>${data.full_name}</h3>
+  <p>Phone: ${data.phone || 'N/A'}</p>
+  <p>Status: ${data.account_status}</p>
+  <p>Verified: ${data.is_verified ? 'Yes' : 'No'}</p>
+  <p>Joined: ${window.adminApp.formatDate(data.created_at)}</p>
+`;
 
     document.getElementById('modalUserContent').innerHTML = content;
     document.getElementById('userModal').style.display = 'block';
@@ -1319,6 +1337,46 @@ window.deleteUserPermanently = async function(userId) {
   } catch (err) {
     showNotification('Error: ' + err.message, 'error');
   }
+};
+
+// ========================
+// 🔧 AGENT ROLE ASSIGNMENT LOGIC
+// ========================
+window.updateUserRole = async function(userId, newRole) {
+  if (!confirm(`Change user role to "${newRole}"?`)) return;
+
+  const token = getAuthToken();
+  if (!token) {
+    showNotification('Session expired', 'error');
+    return;
+  }
+
+  try {
+    const res = await fetch('/api/admin/update-user-role', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ userId, newRole })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to update role');
+
+    showNotification(`User role updated to "${newRole}"`, 'success');
+    window.adminApp.loadUsers(); // Reload users list
+  } catch (err) {
+    showNotification('Error: ' + err.message, 'error');
+  }
+};
+
+// 🔧 AGENT ROLE ASSIGNMENT LOGIC - Save role helper
+window.saveUserRole = async function(userId) {
+  const dropdown = document.getElementById(`roleSelect_${userId}`);
+  const newRole = dropdown.value;
+  
+  await window.updateUserRole(userId, newRole);
 };
 
 window.approveVerification = async function(requestId, userId) {

@@ -269,6 +269,7 @@ async function initProfile() {
   editPasswordConfirm.value = '';
 
   await loadListings();
+  initializeAgentButton();
 }
 
 // ================= LOAD USER LISTINGS =================
@@ -989,6 +990,34 @@ function logDebugInfo() {
 
 // Make it globally accessible for debugging
 window.logDebugInfo = logDebugInfo;
+
+// ================= 🔧 AGENT ROLE - Simple Button =================
+function initializeAgentButton() {
+  const userRole = currentUser?.role || 'user';
+  const becomeAgentBtn = document.getElementById('becomeAgentBtn');
+  const agentBadge = document.getElementById('agentBadge');
+
+  if (userRole === 'agent') {
+    // User is already agent - show badge
+    agentBadge.style.display = 'flex';
+    becomeAgentBtn.style.display = 'none';
+  } else {
+    // User is not agent - show button
+    becomeAgentBtn.style.display = 'flex';
+    agentBadge.style.display = 'none';
+    
+    // Click handler
+    becomeAgentBtn.addEventListener('click', () => {
+      const userName = currentUser?.full_name || 'User';
+      const userPhone = currentUser?.phone || '+256XXXXXXXXXX';
+      
+      const message = `Hi Admin, I want to become an agent.\n\nName: ${userName}\nPhone: ${userPhone}`;
+      const encodedMessage = encodeURIComponent(message);
+      
+      window.open(`https://wa.me/256768786757?text=${encodedMessage}`, '_blank');
+    });
+  }
+}
 
 // ================= INITIALIZE PAGE =================
 initProfile();

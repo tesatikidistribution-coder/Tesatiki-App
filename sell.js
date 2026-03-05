@@ -34,11 +34,18 @@ let currentStep = 1;
 let uploadedImages = [];
 const minImages = 1;
 let maxImages = 1; // Dynamic based on ad type
+let currentUserRole = 'user'; // 🔧 Agent role logic added
+
+// 🔧 AGENT ROLE LOGIC ADDED - Dynamic limits based on user role
+let MAX_FREE_ADS_CURRENT = 3; // Default for regular users
+let MAX_AGENT_ADS = 30; // Maximum active listings for agents
+let MAX_IMAGES_AGENT = 4; // Maximum images for agents
+let MAX_IMAGES_USER = 1; // Maximum images for regular users
 
 // -------------------------
 // CONSTANTS
 // -------------------------
-const MAX_FREE_ADS = 3; // Maximum active free ads per user
+const MAX_FREE_ADS = 3; // Maximum active free ads per user (for backwards compatibility)
 
 // -------------------------
 // IMAGE COMPRESSION FUNCTION (50 KB) - Slow Learner Method
@@ -124,17 +131,17 @@ descInput.addEventListener('input', () => {
     descCount.style.color = descInput.value.length > 1800 ? 'red' : descInput.value.length > 1500 ? 'orange' : 'black';
 });
 
-// -------------------------
-// CHECK ACTIVE FREE ADS LIMIT (INCLUDES PENDING AND EDITED)
-// -------------------------
-async function checkActiveFreeAdsLimit(userId) {
+// ========================
+// 🔧 AGENT ROLE LOGIC ADDED - Check Active Listings Limit (Flexible)
+// ========================
+async function checkActiveFreeAdsLimit(userId, allowedAds = MAX_FREE_ADS_CURRENT) {
     try {
         const { data, error } = await supabaseClient
             .from('products')
             .select('id')
             .eq('user_id', userId)
             .eq('ad_type', 'free')
-            .in('status', ['approved', 'pending', 'edited']); // 🔧 Count pending and edited as well
+            .in('status', ['approved', 'pending', 'edited']);
 
         if (error) throw error;
 
@@ -142,12 +149,40 @@ async function checkActiveFreeAdsLimit(userId) {
         
         return {
             count: activeFreeAds,
-            canPost: activeFreeAds < MAX_FREE_ADS,
-            remaining: MAX_FREE_ADS - activeFreeAds
+            canPost: activeFreeAds < allowedAds,
+            remaining: allowedAds - activeFreeAds,
+            limit: allowedAds
         };
     } catch (err) {
         console.error('Error checking free ads limit:', err);
-        return { count: 0, canPost: true, remaining: MAX_FREE_ADS };
+        return { count: 0, canPost: true, remaining: allowedAds, limit: allowedAds };
+    }
+}
+
+// ========================
+// 🔧 AGENT ROLE LOGIC ADDED - Check Total Active Listings (For Agents)
+// ========================
+async function checkAgentListingsLimit(userId) {
+    try {
+        const { data, error } = await supabaseClient
+            .from('products')
+            .select('id')
+            .eq('user_id', userId)
+            .in('status', ['approved', 'pending', 'edited']);
+
+        if (error) throw error;
+
+        const activeListings = data ? data.length : 0;
+        
+        return {
+            count: activeListings,
+            canPost: activeListings < MAX_AGENT_ADS,
+            remaining: MAX_AGENT_ADS - activeListings,
+            limit: MAX_AGENT_ADS
+        };
+    } catch (err) {
+        console.error('Error checking agent listings limit:', err);
+        return { count: 0, canPost: true, remaining: MAX_AGENT_ADS, limit: MAX_AGENT_ADS };
     }
 }
 
@@ -167,7 +202,7 @@ async function updateImageLimits() {
             ? "Price: Free"
             : `Price: UGX ${plan.price.toLocaleString()} (${plan.duration} days)`;
         
-        // Update image limit display
+        // 🔧 Agent role logic added - Update image limit display with dynamic info
         adImageLimitDisplay.textContent = `Image limit: ${plan.maxImages} photo${plan.maxImages > 1 ? 's' : ''}`;
         
         // Check if user needs to remove images
@@ -177,19 +212,22 @@ async function updateImageLimits() {
             alert(`⚠️ You have ${totalImages} images but this plan allows only ${maxImages}. Please remove ${excess} image${excess > 1 ? 's' : ''} before proceeding.`);
         }
 
-        // Show free ads limit info if selecting free ad type (only for new posts, not edits)
+        // 🔧 Agent role logic added - Show FREE ads OR AGENT ads limit info based on role and ad type
         if (selectedAdType === 'free' && !isEditMode) {
             const currentUser = JSON.parse(localStorage.getItem('currentUser'));
             if (currentUser) {
-                const freeAdsStatus = await checkActiveFreeAdsLimit(currentUser.id);
+                const freeAdsStatus = await checkActiveFreeAdsLimit(currentUser.id, MAX_FREE_ADS_CURRENT);
                 
-                // Update the ad note with free ads limit info
+                // Update the ad note with ads limit info
                 const adNote = document.querySelector('.ad-note');
                 if (adNote) {
+                    const roleLabel = currentUserRole === 'agent' ? 'Agent' : 'Free';
+                    const colorClass = freeAdsStatus.canPost ? '#10b981' : '#ef4444';
+                    
                     adNote.innerHTML = `
                         Paid ads get more visibility and appear higher in search results. Image limit increases with paid plans.<br>
-                        <strong style="color: ${freeAdsStatus.canPost ? '#10b981' : '#ef4444'};">
-                            Free ads: ${freeAdsStatus.count}/${MAX_FREE_ADS} active (including pending)
+                        <strong style="color: ${colorClass};">
+                            ${roleLabel} ads: ${freeAdsStatus.count}/${freeAdsStatus.limit} active (including pending)
                             ${freeAdsStatus.canPost ? `(${freeAdsStatus.remaining} remaining)` : '(Limit reached)'}
                         </strong>
                     `;
@@ -207,6 +245,25 @@ async function updateImageLimits() {
 // -------------------------
 function getAuthToken() {
     return localStorage.getItem('authToken') || null;
+}
+
+// ========================
+// 🔧 AGENT ROLE LOGIC ADDED - Initialize user role and limits on page load
+// ========================
+function initializeUserRole() {
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    if (currentUser && currentUser.role) {
+        currentUserRole = currentUser.role;
+        
+        // Set limits based on role
+        if (currentUserRole === 'agent') {
+            MAX_FREE_ADS_CURRENT = MAX_AGENT_ADS; // 30 for agents
+            console.log('🔧 Agent role detected - Max active listings: 30');
+        } else {
+            MAX_FREE_ADS_CURRENT = MAX_FREE_ADS; // 3 for regular users
+            console.log('👤 Regular user role - Max active listings: 3');
+        }
+    }
 }
 
 // -------------------------
@@ -657,12 +714,22 @@ sellForm.addEventListener('submit', async function(e) {
         }
     }
 
-    // CHECK FREE ADS LIMIT (only for new free ads, not edits)
-    if (!isEditMode && adTypeSelect.value === 'free') {
-        const freeAdsStatus = await checkActiveFreeAdsLimit(currentUser.id);
+    // 🔧 Agent role logic added - CHECK AGENT LISTINGS LIMIT (for agents posting any ad type)
+    if (!isEditMode && currentUserRole === 'agent') {
+        const agentStatus = await checkAgentListingsLimit(currentUser.id);
+        
+        if (!agentStatus.canPost) {
+            alert(`❌ You have reached the agent limit of ${MAX_AGENT_ADS} active listings.\n\nTo post more:\n• Delete one of your existing listings, OR\n• Wait for one of your listings to expire or be approved and then manage your inventory`);
+            return;
+        }
+    }
+
+    // 🔧 Agent role logic added - CHECK FREE ADS LIMIT (only for new free ads, not edits)
+    if (!isEditMode && adTypeSelect.value === 'free' && currentUserRole !== 'agent') {
+        const freeAdsStatus = await checkActiveFreeAdsLimit(currentUser.id, MAX_FREE_ADS_CURRENT);
         
         if (!freeAdsStatus.canPost) {
-            alert(`❌ You have reached the limit of ${MAX_FREE_ADS} active free ads (including pending).\n\nTo post more:\n• Upgrade to a paid ad type, OR\n• Wait for one of your free ads to expire (after 30 days), OR\n• Delete one of your existing free ads`);
+            alert(`❌ You have reached the limit of ${MAX_FREE_ADS_CURRENT} active free ads (including pending).\n\nTo post more:\n• Upgrade to a paid ad type, OR\n• Wait for one of your free ads to expire (after 30 days), OR\n• Delete one of your existing free ads`);
             return;
         }
     }
@@ -747,10 +814,13 @@ if (adTypeSelect) {
     adTypeSelect.addEventListener('change', updateImageLimits);
 }
 
-// -------------------------
-// INIT
-// -------------------------
+// ========================
+// 🔧 AGENT ROLE LOGIC ADDED - INIT WITH ROLE DETECTION
+// ========================
 document.addEventListener('DOMContentLoaded', async () => {
+    // Initialize user role first
+    initializeUserRole();
+    
     updateStepIndicators();
     titleCount.textContent = '0';
     descCount.textContent = '0';

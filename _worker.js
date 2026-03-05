@@ -1310,6 +1310,78 @@ if (product.images && Array.isArray(product.images) && product.images.length > 0
         return new Response(JSON.stringify({ error: err.message }), { status: 500 });
       }
     }
+    
+    // ========================
+// 🔧 AGENT ROLE ASSIGNMENT LOGIC - Update user role
+// POST /api/admin/update-user-role
+// ========================
+if (pathname === '/api/admin/update-user-role' && request.method === 'POST') {
+  const payload = await requireAuth(request, env);
+  if (!payload || payload.role !== 'admin') {
+    return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
+      status: 401,
+      headers: { 'content-type': 'application/json' }
+    });
+  }
+  
+  try {
+    const { userId, newRole } = await request.json();
+    
+    // Validate inputs
+    if (!userId || !newRole) {
+      return new Response(JSON.stringify({ error: 'userId and newRole required' }), { 
+        status: 400,
+        headers: { 'content-type': 'application/json' }
+      });
+    }
+
+    // Validate role value
+    const validRoles = ['user', 'agent', 'admin'];
+    if (!validRoles.includes(newRole)) {
+      return new Response(JSON.stringify({ error: 'Invalid role. Must be: user, agent, or admin' }), { 
+        status: 400,
+        headers: { 'content-type': 'application/json' }
+      });
+    }
+
+    // Prevent self-demotion from admin
+    if (payload.userId === userId && newRole !== 'admin') {
+      return new Response(JSON.stringify({ error: 'Cannot demote yourself from admin role' }), { 
+        status: 403,
+        headers: { 'content-type': 'application/json' }
+      });
+    }
+
+    // Update user role in database
+    const updateResp = await fetch(`${SUPABASE_REST_USERS}?id=eq.${userId}`, {
+      method: 'PATCH',
+      headers: svcHeaders(env),
+      body: JSON.stringify({ role: newRole, updated_at: new Date().toISOString() })
+    });
+
+    if (!updateResp.ok) {
+      const txt = await updateResp.text();
+      return new Response(JSON.stringify({ error: 'Failed to update role', details: txt }), { 
+        status: 500,
+        headers: { 'content-type': 'application/json' }
+      });
+    }
+
+    console.log(`✅ [ADMIN] Updated user ${userId} role to "${newRole}"`);
+
+    return new Response(JSON.stringify({ 
+      success: true, 
+      message: `User role updated to "${newRole}"`
+    }), {
+      headers: { 'content-type': 'application/json' }
+    });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: err.message }), { 
+      status: 500,
+      headers: { 'content-type': 'application/json' }
+    });
+  }
+}
 
     // ========================
     // CREATE PRODUCT
@@ -1331,6 +1403,33 @@ if (product.images && Array.isArray(product.images) && product.images.length > 0
             status: 400,
             headers: { 'content-type': 'application/json' }
           });
+        }
+
+        // 🔧 AGENT ROLE LOGIC ADDED - Check agent listing limit before creating
+        if (payload.role === 'agent') {
+          const agentListingsResp = await fetch(
+            `${SUPABASE_REST_PRODUCTS}?user_id=eq.${payload.userId}&status=in.(approved,pending,edited)&select=id`,
+            { headers: svcHeaders(env) }
+          );
+
+          if (agentListingsResp.ok) {
+            const agentListings = await agentListingsResp.json();
+            const currentCount = agentListings ? agentListings.length : 0;
+            const MAX_AGENT_ADS = 30;
+
+            if (currentCount >= MAX_AGENT_ADS) {
+              return new Response(
+                JSON.stringify({ 
+                  error: `Agent listing limit reached. You have ${currentCount}/${MAX_AGENT_ADS} active listings. Delete or wait for one to expire.`
+                }),
+                {
+                  status: 429,
+                  headers: { 'content-type': 'application/json' }
+                }
+              );
+            }
+            console.log(`✅ [AGENT] User ${payload.userId} has ${currentCount}/${MAX_AGENT_ADS} listings - OK to create`);
+          }
         }
 
         const cleanListing = sanitizeProductFields(body.listing);
